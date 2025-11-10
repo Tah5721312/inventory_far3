@@ -24,10 +24,10 @@ export default function Navigation() {
     label: string;
     
   }> = [
-    { href: '/main_categories', label: 'main_categories'},
-    { href: '/sub_categories', label: 'sub_categories' },
+    { href: '/main-categories', label: 'main-categories'},
+    { href: '/sub-categories', label: 'sub-categories' },
     { href: '/items', label: 'items' },
-    { href: '/item_type', label: 'item_type' },
+    { href: '/item-type', label: 'item_type' },
     { href: '/others', label: 'others' },
   ];
 

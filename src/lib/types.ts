@@ -47,6 +47,7 @@ export interface User {
 export interface MainCategory {
   CAT_ID: number;
   CAT_NAME: string;
+  description?: string;
 }
 
 export interface SubCategory extends MainCategory {

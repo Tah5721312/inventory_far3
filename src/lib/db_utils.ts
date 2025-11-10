@@ -251,7 +251,13 @@ export async function deleteUser(id: number) {
 
 
 
-// Sub_Categories CRUD operations
+/*//====================
+
+Sub_Categories CRUD operations
+
+*///====================
+
+
 export async function getAllSubCategories() {
     const query = `SELECT SUB_CAT_ID, SUB_CAT_NAME, CAT_ID FROM far3.SUB_CATEGORIES ORDER BY SUB_CAT_NAME`;
     return executeQuery<any>(query).then(result => result.rows);
@@ -307,20 +313,29 @@ export async function deleteSubCategory(id: number) {
     return result.rowsAffected || 0;
 }
 
+
+
+/*//====================
+
 // Main_Categories CRUD operations
+
+*///====================
+
+
+
 export async function getAllMainCategories() {
-    const query = `SELECT CAT_ID, CAT_NAME FROM far3.MAIN_CATEGORIES ORDER BY CAT_NAME`;
+    const query = `SELECT CAT_ID, CAT_NAME, DESCRIPTION FROM far3.MAIN_CATEGORIES ORDER BY CAT_NAME`;
     return executeQuery<any>(query).then(result => result.rows);
 }
 
 export async function getMainCategoryById(id: number) {
-    const query = `SELECT CAT_ID, CAT_NAME FROM far3.MAIN_CATEGORIES WHERE CAT_ID = :id`;
+    const query = `SELECT CAT_ID, CAT_NAME, DESCRIPTION FROM far3.MAIN_CATEGORIES WHERE CAT_ID = :id`;
     return executeQuery<any>(query, { id }).then(result => result.rows[0] || null);
 }
 
-export async function createMainCategory(mainCategory: { CAT_NAME: string }) {
+export async function createMainCategory(mainCategory: { CAT_NAME: string, DESCRIPTION: string }) {
     const result = await executeReturningQuery<{ cat_id: number }>(
-        `INSERT INTO far3.MAIN_CATEGORIES (CAT_NAME) VALUES (:cat_name) RETURNING CAT_ID INTO :id`,
+        `INSERT INTO far3.MAIN_CATEGORIES (CAT_NAME ,DESCRIPTION) VALUES (:cat_name, :DESCRIPTION) RETURNING CAT_ID INTO :id`,
         {
             cat_name: mainCategory.CAT_NAME,
             id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
@@ -333,23 +348,35 @@ export async function createMainCategory(mainCategory: { CAT_NAME: string }) {
     }
     return newCatId;
 }
+export async function updateMainCategory(
+  id: number,
+  mainCategory: { CAT_NAME?: string; DESCRIPTION?: string }
+) {
+  const setClauses: string[] = [];
+  const bindParams: oracledb.BindParameters = { id };
 
-export async function updateMainCategory(id: number, mainCategory: { CAT_NAME?: string }) {
-    const setClauses: string[] = [];
-    const bindParams: oracledb.BindParameters = { id };
+  if (mainCategory.CAT_NAME !== undefined) {
+    setClauses.push('CAT_NAME = :cat_name');
+    bindParams.cat_name = mainCategory.CAT_NAME;
+  }
 
-    if (mainCategory.CAT_NAME !== undefined) {
-        setClauses.push('CAT_NAME = :cat_name');
-        bindParams.cat_name = mainCategory.CAT_NAME;
-    }
+  if (mainCategory.DESCRIPTION !== undefined) {
+    setClauses.push('DESCRIPTION = :DESCRIPTION');
+    bindParams.DESCRIPTION = mainCategory.DESCRIPTION;
+  }
 
-    if (setClauses.length === 0) {
-        return 0;
-    }
+  if (setClauses.length === 0) {
+    return 0; // مفيش حاجة تتحدث
+  }
 
-    const query = `UPDATE far3.MAIN_CATEGORIES SET ${setClauses.join(', ')} WHERE CAT_ID = :id`;
-    const result = await executeQuery(query, bindParams);
-    return result.rowsAffected || 0;
+  const query = `
+    UPDATE far3.MAIN_CATEGORIES 
+    SET ${setClauses.join(', ')} 
+    WHERE CAT_ID = :id
+  `;
+
+  const result = await executeQuery(query, bindParams);
+  return result.rowsAffected || 0;
 }
 
 export async function deleteMainCategory(id: number) {
@@ -358,7 +385,15 @@ export async function deleteMainCategory(id: number) {
     return result.rowsAffected || 0;
 }
 
+
+
+/*//====================
+
 // ITEM_TYPES CRUD operations
+
+*///====================
+
+
 export async function getAllItemTypes() {
     const query = `SELECT ITEM_TYPE_ID, ITEM_TYPE_NAME, SUB_CAT_ID FROM far3.ITEM_TYPES ORDER BY ITEM_TYPE_NAME`;
     return executeQuery<any>(query).then(result => result.rows);
@@ -414,7 +449,14 @@ export async function deleteItemType(id: number) {
     return result.rowsAffected || 0;
 }
 
+
+
+/*//====================
+
 // Departments CRUD operations
+
+*///====================
+
 export async function getAllDepartments() {
     const query = `SELECT DEPT_ID, DEPT_NAME FROM far3.DEPARTMENTS ORDER BY DEPT_NAME`;
     return executeQuery<any>(query).then(result => result.rows);
@@ -454,7 +496,12 @@ export async function deleteDepartment(id: number) {
     return result.rowsAffected || 0;
 }
 
+/*//====================
+
 // Ranks CRUD operations
+
+*///====================
+
 export async function getAllRanks() {
     const query = `SELECT RANK_ID, RANK_NAME FROM far3.RANKS ORDER BY RANK_NAME`;
     return executeQuery<any>(query).then(result => result.rows);
@@ -505,7 +552,12 @@ export async function deleteRank(id: number) {
   return result.rowsAffected || 0;
 }
 
+/*//====================
+
 // Floors CRUD operations
+
+*///====================
+
 export async function getAllFloors() {
     const query = `SELECT FLOOR_ID, FLOOR_NAME FROM far3.FLOORS ORDER BY FLOOR_NAME`;
     return executeQuery<any>(query).then(result => result.rows);
