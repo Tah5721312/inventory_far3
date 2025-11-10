@@ -28,6 +28,7 @@ export default function Navigation() {
     { href: '/sub_categories', label: 'sub_categories' },
     { href: '/items', label: 'items' },
     { href: '/item_type', label: 'item_type' },
+    { href: '/others', label: 'others' },
   ];
 
   return (
