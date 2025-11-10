@@ -11,9 +11,10 @@ export async function GET() {
     const subCategories = await getAllSubCategories();
     return NextResponse.json({ success: true, data: subCategories });
   } catch (error) {
-    console.error('Error fetching sub categories:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Error fetching sub categories:', errorMessage);
     return NextResponse.json(
-      { success: false, error: 'فشل في جلب التصنيفات الفرعية' },
+      { success: false, error: 'فشل في جلب التصنيفات الفرعية', details: errorMessage },
       { status: 500 }
     );
   }
@@ -58,9 +59,10 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating sub category:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Error creating sub category:', errorMessage);
     return NextResponse.json(
-      { success: false, error: 'فشل في إضافة التصنيف الفرعي' },
+      { success: false, error: 'فشل في إضافة التصنيف الفرعي', details: errorMessage },
       { status: 500 }
     );
   }

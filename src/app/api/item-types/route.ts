@@ -7,9 +7,10 @@ export async function GET() {
     const itemTypes = await getAllItemTypes();
     return NextResponse.json({ success: true, data: itemTypes });
   } catch (error) {
-    console.error('Error fetching item types:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Error fetching item types:', errorMessage);
     return NextResponse.json(
-      { success: false, error: 'فشل في جلب أنواع الأصناف' },
+      { success: false, error: 'فشل في جلب أنواع الأصناف', details: errorMessage },
       { status: 500 }
     );
   }
@@ -38,9 +39,10 @@ export async function POST(request: NextRequest) {
       message: 'تم إضافة نوع الصنف بنجاح',
     });
   } catch (error) {
-    console.error('Error creating item type:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Error creating item type:', errorMessage);
     return NextResponse.json(
-      { success: false, error: 'فشل في إضافة نوع الصنف' },
+      { success: false, error: 'فشل في إضافة نوع الصنف', details: errorMessage },
       { status: 500 }
     );
   }

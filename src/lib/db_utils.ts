@@ -5,6 +5,7 @@ import { Item, User, MainCategory, SubCategory, ItemType, Rank, Floor } from '@/
 /**
  * جلب جميع الأصناف مع إمكانية الفلترة
  */
+
 export async function getAllItems(filters?: {
   subCatId?: number;
   userId?: number;
@@ -118,11 +119,11 @@ export async function createItem(item: Omit<Item, 'ITEM_ID' | 'CREATED_AT' | 'UP
     }
   );
 
-  const outBinds = result.outBinds as { id: number[] } | undefined;
-  const newItemId = outBinds?.id?.[0];
+  const outBinds = result.outBinds as any;
+  const newItemId = Array.isArray(outBinds?.id) ? outBinds.id[0] : outBinds?.id;
 
   if (!newItemId) {
-    throw new Error('Failed to retrieve the new item ID');
+    throw new Error(`Failed to retrieve the new item ID. Received outBinds with id: ${outBinds?.id}`);
   }
 
   return newItemId;
@@ -132,14 +133,38 @@ export async function createItem(item: Omit<Item, 'ITEM_ID' | 'CREATED_AT' | 'UP
  * تحديث صنف
  */
 export async function updateItem(id: number, item: Partial<Omit<Item, 'ITEM_ID'>>) {
+  // Whitelist of valid updateable columns in the ITEMS table
+  // Excludes read-only joined fields like ITEM_TYPE_NAME, ASSIGNED_USER, DEPT_NAME, etc.
+  const validColumns = new Set([
+    'ITEM_NAME',
+    'SERIAL',
+    'KIND',
+    'SITUATION',
+    'PROPERTIES',
+    'HDD',
+    'RAM',
+    'IP',
+    'COMP_NAME',
+    'LOCK_NUM',
+    'USER_ID',
+    'DEPT_ID',
+    'FLOOR_ID',
+    'SUB_CAT_ID',
+    'ITEM_TYPE_ID',
+  ]);
+
   const setClauses: string[] = [];
   const bindParams: oracledb.BindParameters = { id };
 
   Object.entries(item).forEach(([key, value]) => {
-    if (value !== undefined) {
+    // Only allow whitelisted columns
+    if (validColumns.has(key) && value !== undefined) {
       const bindParamName = key;
       setClauses.push(`${key} = :${bindParamName}`);
       bindParams[bindParamName] = value;
+    } else if (!validColumns.has(key) && value !== undefined) {
+      // Log warning for unexpected columns
+      console.warn(`updateItem: Ignoring non-whitelisted column "${key}"`);
     }
   });
 
@@ -214,10 +239,10 @@ export async function createUser(user: Omit<User, 'USER_ID'>) {
             id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
         }
     );
-    const outBinds = result.outBinds as { id: number[] } | undefined;
-    const newUserId = outBinds?.id?.[0];
+    const outBinds = result.outBinds as any;
+    const newUserId = Array.isArray(outBinds?.id) ? outBinds.id[0] : outBinds?.id;
     if (!newUserId) {
-        throw new Error('Failed to retrieve the new user ID');
+        throw new Error(`Failed to retrieve the new user ID. Received outBinds with id: ${outBinds?.id}`);
     }
     return newUserId;
 }
@@ -295,10 +320,10 @@ export async function createSubCategory(subCategory: {
             id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
         }
     );
-    const outBinds = result.outBinds as { id: number[] } | undefined;
-    const newSubCatId = outBinds?.id?.[0];
+    const outBinds = result.outBinds as any;
+    const newSubCatId = Array.isArray(outBinds?.id) ? outBinds.id[0] : outBinds?.id;
     if (!newSubCatId) {
-        throw new Error('Failed to retrieve the new sub category ID');
+        throw new Error(`Failed to retrieve the new sub category ID. Received outBinds with id: ${outBinds?.id}`);
     }
     return newSubCatId;
 }
@@ -357,16 +382,17 @@ export async function getMainCategoryById(id: number) {
 
 export async function createMainCategory(mainCategory: { CAT_NAME: string, DESCRIPTION: string }) {
     const result = await executeReturningQuery<{ cat_id: number }>(
-        `INSERT INTO far3.MAIN_CATEGORIES (CAT_NAME ,DESCRIPTION) VALUES (:cat_name, :DESCRIPTION) RETURNING CAT_ID INTO :id`,
+        `INSERT INTO far3.MAIN_CATEGORIES (CAT_NAME ,DESCRIPTION) VALUES (:cat_name, :description) RETURNING CAT_ID INTO :id`,
         {
             cat_name: mainCategory.CAT_NAME,
+            description: mainCategory.DESCRIPTION,
             id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
         }
     );
-    const outBinds = result.outBinds as { id: number[] } | undefined;
-    const newCatId = outBinds?.id?.[0];
+    const outBinds = result.outBinds as any;
+    const newCatId = Array.isArray(outBinds?.id) ? outBinds.id[0] : outBinds?.id;
     if (!newCatId) {
-        throw new Error('Failed to retrieve the new main category ID');
+        throw new Error(`Failed to retrieve the new main category ID. Received outBinds with id: ${outBinds?.id}`);
     }
     return newCatId;
 }
@@ -435,10 +461,10 @@ export async function createItemType(itemType: { ITEM_TYPE_NAME: string; SUB_CAT
             id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
         }
     );
-    const outBinds = result.outBinds as { id: number[] } | undefined;
-    const newItemTypeId = outBinds?.id?.[0];
+    const outBinds = result.outBinds as any;
+    const newItemTypeId = Array.isArray(outBinds?.id) ? outBinds.id[0] : outBinds?.id;
     if (!newItemTypeId) {
-        throw new Error('Failed to retrieve the new item type ID');
+        throw new Error(`Failed to retrieve the new item type ID. Received outBinds with id: ${outBinds?.id}`);
     }
     return newItemTypeId;
 }
@@ -490,9 +516,26 @@ export async function getDepartmentById(id: number) {
 }
 
 export async function createDepartment(department: { DEPT_NAME: string }) {
-    const query = `INSERT INTO far3.DEPARTMENTS (DEPT_NAME) VALUES (:dept_name)`;
-    return executeQuery(query, { dept_name: department.DEPT_NAME }).then(result => result.rowsAffected || 0);
+  const nextIdResult = await executeQuery<{ NEXT_ID: number }>(
+    `SELECT NVL(MAX(DEPT_ID),0) + 1 AS NEXT_ID FROM far3.DEPARTMENTS`
+  );
+  const nextId = nextIdResult.rows[0].NEXT_ID;
+
+  const result = await executeReturningQuery<{ dept_id: number }>(
+    `INSERT INTO far3.DEPARTMENTS (DEPT_ID, DEPT_NAME)
+     VALUES (:dept_id, :dept_name)
+     RETURNING DEPT_ID INTO :id`,
+    {
+      dept_id: nextId,
+      dept_name: department.DEPT_NAME,
+      id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+    }
+  );
+
+  const outBinds = result.outBinds as any;
+  return Array.isArray(outBinds?.id) ? outBinds.id[0] : outBinds?.id;
 }
+
 
 export async function updateDepartment(id: number, department: { DEPT_NAME?: string }) {
     const setClauses: string[] = [];
@@ -534,21 +577,29 @@ export async function getRankById(id: number) {
   return executeQuery<Rank>(query, { id }).then(result => result.rows[0] || null);
 }
 
+
 export async function createRank(rank: { RANK_NAME: string }) {
+  const nextIdResult = await executeQuery<{ NEXT_ID: number }>(
+    `SELECT NVL(MAX(RANK_ID), 0) + 1 AS NEXT_ID FROM far3.RANKS`
+  );
+  const nextId = nextIdResult.rows[0].NEXT_ID;
+
   const result = await executeReturningQuery<{ rank_id: number }>(
-    `INSERT INTO far3.RANKS (RANK_NAME) VALUES (:rank_name) RETURNING RANK_ID INTO :id`,
+    `INSERT INTO far3.RANKS (RANK_ID, RANK_NAME)
+     VALUES (:rank_id, :rank_name)
+     RETURNING RANK_ID INTO :id`,
     {
+      rank_id: nextId,
       rank_name: rank.RANK_NAME,
       id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
     }
   );
-  const outBinds = result.outBinds as { id: number[] } | undefined;
-  const newRankId = outBinds?.id?.[0];
-  if (!newRankId) {
-    throw new Error('Failed to retrieve the new rank ID');
-  }
+
+  const outBinds = result.outBinds as any;
+  const newRankId = Array.isArray(outBinds?.id) ? outBinds.id[0] : outBinds?.id;
   return newRankId;
 }
+
 
 export async function updateRank(id: number, rank: { RANK_NAME?: string }) {
   const setClauses: string[] = [];
@@ -590,21 +641,37 @@ export async function getFloorById(id: number) {
   return executeQuery<Floor>(query, { id }).then(result => result.rows[0] || null);
 }
 
+
 export async function createFloor(floor: { FLOOR_NAME: string }) {
+  // أولاً نحصل على رقم جديد يساوي أكبر FLOOR_ID + 1
+  const nextIdResult = await executeQuery<{ NEXT_ID: number }>(
+    `SELECT NVL(MAX(FLOOR_ID), 0) + 1 AS NEXT_ID FROM far3.FLOORS`
+  );
+
+  const nextId = nextIdResult.rows[0].NEXT_ID;
+
+  // الآن ندخل الصف مع تمرير FLOOR_ID يدويًا
   const result = await executeReturningQuery<{ floor_id: number }>(
-    `INSERT INTO far3.FLOORS (FLOOR_NAME) VALUES (:floor_name) RETURNING FLOOR_ID INTO :id`,
+    `INSERT INTO far3.FLOORS (FLOOR_ID, FLOOR_NAME)
+     VALUES (:floor_id, :floor_name)
+     RETURNING FLOOR_ID INTO :id`,
     {
+      floor_id: nextId,
       floor_name: floor.FLOOR_NAME,
       id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
     }
   );
-  const outBinds = result.outBinds as { id: number[] } | undefined;
-  const newFloorId = outBinds?.id?.[0];
+
+  const outBinds = result.outBinds as any;
+  const newFloorId = Array.isArray(outBinds?.id) ? outBinds.id[0] : outBinds?.id;
+
   if (!newFloorId) {
-    throw new Error('Failed to retrieve the new floor ID');
+    throw new Error(`Failed to retrieve the new floor ID. Received outBinds with id: ${outBinds?.id}`);
   }
+
   return newFloorId;
 }
+
 
 
 export async function updateFloor(id: number, floor: { FLOOR_NAME?: string }) {
