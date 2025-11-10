@@ -61,6 +61,8 @@ export interface SubCategory extends MainCategory {
 export interface ItemType extends SubCategory {
   ITEM_TYPE_ID: number;
   ITEM_TYPE_NAME: string;
+  SUB_CAT_ID: number;
+
 }
 
 export interface Rank {
