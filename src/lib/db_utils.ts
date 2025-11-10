@@ -259,21 +259,39 @@ Sub_Categories CRUD operations
 
 
 export async function getAllSubCategories() {
-    const query = `SELECT SUB_CAT_ID, SUB_CAT_NAME, CAT_ID FROM far3.SUB_CATEGORIES ORDER BY SUB_CAT_NAME`;
+    const query = `
+      SELECT sc.SUB_CAT_ID, sc.SUB_CAT_NAME, sc.CAT_ID, sc.DESCRIPTION,
+             mc.CAT_NAME
+      FROM far3.SUB_CATEGORIES sc
+      LEFT JOIN far3.MAIN_CATEGORIES mc ON sc.CAT_ID = mc.CAT_ID
+      ORDER BY sc.SUB_CAT_NAME`;
     return executeQuery<any>(query).then(result => result.rows);
 }
 
 export async function getSubCategoryById(id: number) {
-    const query = `SELECT SUB_CAT_ID, SUB_CAT_NAME, CAT_ID FROM far3.SUB_CATEGORIES WHERE SUB_CAT_ID = :id`;
+    const query = `
+      SELECT sc.SUB_CAT_ID, sc.SUB_CAT_NAME, sc.CAT_ID, sc.DESCRIPTION,
+             mc.CAT_NAME
+      FROM far3.SUB_CATEGORIES sc
+      LEFT JOIN far3.MAIN_CATEGORIES mc ON sc.CAT_ID = mc.CAT_ID
+      WHERE sc.SUB_CAT_ID = :id`;
     return executeQuery<any>(query, { id }).then(result => result.rows[0] || null);
 }
 
-export async function createSubCategory(subCategory: { SUB_CAT_NAME: string; CAT_ID: number }) {
+
+export async function createSubCategory(subCategory: { 
+  SUB_CAT_NAME: string; 
+  CAT_ID: number; 
+  DESCRIPTION?: string 
+}) {
     const result = await executeReturningQuery<{ sub_cat_id: number }>(
-        `INSERT INTO far3.SUB_CATEGORIES (SUB_CAT_NAME, CAT_ID) VALUES (:sub_cat_name, :cat_id) RETURNING SUB_CAT_ID INTO :id`,
+        `INSERT INTO far3.SUB_CATEGORIES (SUB_CAT_NAME, CAT_ID, DESCRIPTION) 
+         VALUES (:sub_cat_name, :cat_id, :description) 
+         RETURNING SUB_CAT_ID INTO :id`,
         {
             sub_cat_name: subCategory.SUB_CAT_NAME,
             cat_id: subCategory.CAT_ID,
+            description: subCategory.DESCRIPTION || null,
             id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
         }
     );
@@ -285,7 +303,7 @@ export async function createSubCategory(subCategory: { SUB_CAT_NAME: string; CAT
     return newSubCatId;
 }
 
-export async function updateSubCategory(id: number, subCategory: { SUB_CAT_NAME?: string; CAT_ID?: number }) {
+export async function updateSubCategory(id: number, subCategory: { SUB_CAT_NAME?: string; CAT_ID?: number ; DESCRIPTION?: string }) {
     const setClauses: string[] = [];
     const bindParams: oracledb.BindParameters = { id };
 
@@ -296,6 +314,10 @@ export async function updateSubCategory(id: number, subCategory: { SUB_CAT_NAME?
     if (subCategory.CAT_ID !== undefined) {
         setClauses.push('CAT_ID = :cat_id');
         bindParams.cat_id = subCategory.CAT_ID;
+    }  
+     if (subCategory.DESCRIPTION !== undefined) {
+        setClauses.push('DESCRIPTION = :DESCRIPTION');
+        bindParams.DESCRIPTION = subCategory.DESCRIPTION;
     }
 
     if (setClauses.length === 0) {

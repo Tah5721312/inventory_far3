@@ -47,12 +47,15 @@ export interface User {
 export interface MainCategory {
   CAT_ID: number;
   CAT_NAME: string;
-  description?: string;
+  DESCRIPTION?: string;
 }
 
 export interface SubCategory extends MainCategory {
   SUB_CAT_ID: number;
   SUB_CAT_NAME: string;
+  CAT_ID: number;
+  DESCRIPTION?: string;
+
 }
 
 export interface ItemType extends SubCategory {
