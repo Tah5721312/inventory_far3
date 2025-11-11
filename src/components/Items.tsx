@@ -51,6 +51,16 @@ interface ItemType {
   SUB_CAT_ID?: number;
 }
 
+interface Department {
+  DEPT_ID: number;
+  DEPT_NAME: string;
+}
+
+interface Floor {
+  FLOOR_ID: number;
+  FLOOR_NAME: string;
+}
+
 export default function ItemsPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +75,8 @@ export default function ItemsPage() {
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [floors, setFloors] = useState<Floor[]>([]);
   const [filteredItemTypes, setFilteredItemTypes] = useState<ItemType[]>([]);
   const [filteredSubCategories, setFilteredSubCategories] = useState<SubCategory[]>([]);
   
@@ -99,46 +111,104 @@ export default function ItemsPage() {
 
   const fetchLookupData = async () => {
     try {
-      const [catsRes, subsRes, usersRes, typesRes] = await Promise.all([
+      const [catsRes, subsRes, usersRes, typesRes, deptsRes, floorsRes] = await Promise.all([
         fetch('/api/main-categories'),
         fetch('/api/sub-categories'),
         fetch('/api/users'),
         fetch('/api/item-types'),
+        fetch('/api/departments'),
+        fetch('/api/floors'),
       ]);
 
-      const [catsData, subsData, usersData, typesData] = await Promise.all([
+      const [catsData, subsData, usersData, typesData, deptsData, floorsData] = await Promise.all([
         catsRes.json(),
         subsRes.json(),
         usersRes.json(),
         typesRes.json(),
+        deptsRes.json(),
+        floorsRes.json(),
       ]);
 
-      // Handle different response formats
-      setCategories((catsData?.data || catsData || []).map((c: any) => ({ 
+      // Helper function to safely extract array from response
+      const getArrayFromResponse = (data: any, fallback: any[] = [], dataType: string = 'data'): any[] => {
+        if (!data) {
+          console.warn(`⚠️ ${dataType}: No data received`);
+          return fallback;
+        }
+        if (data.success === false) {
+          console.warn(`⚠️ ${dataType}: API returned success: false`, data.error);
+          return fallback; // Handle error responses
+        }
+        if (Array.isArray(data)) {
+          console.log(`✅ ${dataType}: Data is already an array`, data.length);
+          return data;
+        }
+        if (Array.isArray(data.data)) {
+          console.log(`✅ ${dataType}: Found data in data.data`, data.data.length);
+          return data.data;
+        }
+        if (Array.isArray(data.users)) {
+          console.log(`✅ ${dataType}: Found data in data.users`, data.users.length);
+          return data.users;
+        }
+        console.warn(`⚠️ ${dataType}: Could not find array in response`, data);
+        return fallback;
+      };
+
+      // Handle categories
+      const categoriesArray = getArrayFromResponse(catsData);
+      setCategories(categoriesArray.map((c: any) => ({ 
         CAT_ID: Number(c.CAT_ID), 
         CAT_NAME: c.CAT_NAME 
       })));
 
-      setSubCategories((subsData?.data || subsData || []).map((s: any) => ({ 
+      // Handle sub-categories
+      const subCategoriesArray = getArrayFromResponse(subsData);
+      setSubCategories(subCategoriesArray.map((s: any) => ({ 
         SUB_CAT_ID: Number(s.SUB_CAT_ID), 
         SUB_CAT_NAME: s.SUB_CAT_NAME, 
         CAT_ID: Number(s.CAT_ID) 
       })));
 
-      const usersArray = usersData?.users || usersData?.data || usersData || [];
+      // Handle users (special case: returns { users: [...] })
+      const usersArray = getArrayFromResponse(usersData);
       setUsers(usersArray.map((u: any) => ({ 
         USER_ID: Number(u.USER_ID), 
         USER_NAME: u.FULL_NAME || u.USER_NAME || u.USERNAME 
       })));
 
-      setItemTypes((typesData?.data || typesData || []).map((t: any) => ({ 
+      // Handle item types
+      const itemTypesArray = getArrayFromResponse(typesData);
+      setItemTypes(itemTypesArray.map((t: any) => ({ 
         ITEM_TYPE_ID: Number(t.ITEM_TYPE_ID), 
         ITEM_TYPE_NAME: t.ITEM_TYPE_NAME, 
         SUB_CAT_ID: t.SUB_CAT_ID ? Number(t.SUB_CAT_ID) : undefined 
       })));
 
+      // Handle departments
+      console.log('📦 Departments response:', deptsData);
+      const departmentsArray = getArrayFromResponse(deptsData, [], 'Departments');
+      console.log('📦 Departments array:', departmentsArray);
+      const mappedDepartments = departmentsArray.map((d: any) => ({ 
+        DEPT_ID: Number(d.DEPT_ID), 
+        DEPT_NAME: d.DEPT_NAME || 'Unknown'
+      }));
+      console.log('📦 Mapped departments:', mappedDepartments, `(${mappedDepartments.length} items)`);
+      setDepartments(mappedDepartments);
+
+      // Handle floors
+      console.log('🏢 Floors response:', floorsData);
+      const floorsArray = getArrayFromResponse(floorsData, [], 'Floors');
+      console.log('🏢 Floors array:', floorsArray);
+      const mappedFloors = floorsArray.map((f: any) => ({ 
+        FLOOR_ID: Number(f.FLOOR_ID), 
+        FLOOR_NAME: f.FLOOR_NAME || 'Unknown'
+      }));
+      console.log('🏢 Mapped floors:', mappedFloors, `(${mappedFloors.length} items)`);
+      setFloors(mappedFloors);
+
     } catch (error) {
-      console.error('Error fetching lookup data:', error);
+      console.error('❌ Error fetching lookup data:', error);
     }
   };
 
@@ -189,7 +259,12 @@ export default function ItemsPage() {
   const openModal = (item?: Item) => {
     if (item) {
       setEditingItem(item);
-      setFormData(item);
+      // If USER_ID is null or undefined, don't set it so the warehouse option is selected
+      const formDataForItem = { ...item };
+      if (formDataForItem.USER_ID === null || formDataForItem.USER_ID === undefined) {
+        formDataForItem.USER_ID = undefined;
+      }
+      setFormData(formDataForItem);
     } else {
       setEditingItem(null);
       setFormData({});
@@ -210,10 +285,11 @@ export default function ItemsPage() {
 
     const payload: any = { ...formData };
     const numericKeys = [
-      'ITEM_TYPE_ID', 'CAT_ID', 'SUB_CAT_ID', 'USER_ID', 
+      'ITEM_TYPE_ID', 'CAT_ID', 'SUB_CAT_ID', 
       'LOCK_NUM', 'DEPT_ID', 'FLOOR_ID',
     ];
     
+    // Handle numeric keys (except USER_ID which needs special handling)
     numericKeys.forEach((k) => {
       const v = payload[k];
       if (v === '' || v === undefined || v === null) {
@@ -227,6 +303,19 @@ export default function ItemsPage() {
         }
       }
     });
+
+    // Handle USER_ID separately - allow null for warehouse items
+    if (payload.USER_ID === '' || payload.USER_ID === undefined || payload.USER_ID === null) {
+      // If USER_ID is empty, set it to null (for warehouse items)
+      payload.USER_ID = null;
+    } else {
+      const userId = Number(payload.USER_ID);
+      if (Number.isNaN(userId) || userId === 0) {
+        payload.USER_ID = null;
+      } else {
+        payload.USER_ID = userId;
+      }
+    }
 
     const readOnlyKeys = [
       'ITEM_TYPE_NAME', 'ASSIGNED_USER', 'DEPT_NAME', 'FLOOR_NAME',
@@ -406,7 +495,9 @@ export default function ItemsPage() {
                       <td className="px-6 py-4 text-sm text-slate-800 font-medium">{item.ITEM_NAME}</td>
                       <td className="px-6 py-4 text-sm text-slate-600">{item.ITEM_TYPE_NAME || '-'}</td>
                       <td className="px-6 py-4 text-sm text-slate-600">{item.SERIAL || '-'}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{item.ASSIGNED_USER || '-'}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">
+                        {item.ASSIGNED_USER || (item.USER_ID === null || item.USER_ID === undefined ? 'المخزن' : '-')}
+                      </td>
                       <td className="px-6 py-4 text-sm text-slate-600">{item.DEPT_NAME || '-'}</td>
                       <td className="px-6 py-4 text-sm text-slate-600">{item.FLOOR_NAME || '-'}</td>
                       <td className="px-6 py-4 text-sm text-slate-600">{item.SITUATION || '-'}</td>
@@ -535,17 +626,84 @@ export default function ItemsPage() {
                       المستخدم
                     </label>
                     <select
-                      value={formData.USER_ID || ''}
-                      onChange={(e) => setFormData({ ...formData, USER_ID: Number(e.target.value) })}
+                      value={formData.USER_ID !== undefined && formData.USER_ID !== null ? formData.USER_ID : 'warehouse'}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === 'warehouse') {
+                          setFormData({ ...formData, USER_ID: undefined });
+                        } else if (value === '') {
+                          setFormData({ ...formData, USER_ID: undefined });
+                        } else {
+                          setFormData({ ...formData, USER_ID: Number(value) });
+                        }
+                      }}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                     >
-                      <option value="">اختر المستخدم</option>
+                      <option value="warehouse">المخزن (لا يوجد مستخدم)</option>
+                      {/* <option value="">اختر المستخدم</option> */}
                       {users.map(user => (
                         <option key={user.USER_ID} value={user.USER_ID}>
                           {user.USER_NAME}
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      القسم {departments.length > 0 && `(${departments.length})`}
+                    </label>
+                    <select
+                      value={formData.DEPT_ID || ''}
+                      onChange={(e) => setFormData({ ...formData, DEPT_ID: Number(e.target.value) })}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    >
+                      <option value="">اختر القسم</option>
+                      {departments.length === 0 ? (
+                        <option value="" disabled>لا توجد أقسام</option>
+                      ) : (
+                        departments.map(dept => (
+                          <option key={dept.DEPT_ID} value={dept.DEPT_ID}>
+                            {dept.DEPT_NAME}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      الطابق {floors.length > 0 && `(${floors.length})`}
+                    </label>
+                    <select
+                      value={formData.FLOOR_ID || ''}
+                      onChange={(e) => setFormData({ ...formData, FLOOR_ID: Number(e.target.value) })}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    >
+                      <option value="">اختر الطابق</option>
+                      {floors.length === 0 ? (
+                        <option value="" disabled>لا توجد طوابق</option>
+                      ) : (
+                        floors.map(floor => (
+                          <option key={floor.FLOOR_ID} value={floor.FLOOR_ID}>
+                            {floor.FLOOR_NAME}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      رقم القفل
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.LOCK_NUM || ''}
+                      onChange={(e) => setFormData({ ...formData, LOCK_NUM: e.target.value ? Number(e.target.value) : undefined })}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="رقم القفل"
+                    />
                   </div>
 
                   <div>
@@ -564,24 +722,32 @@ export default function ItemsPage() {
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       النوع
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.KIND || ''}
                       onChange={(e) => setFormData({ ...formData, KIND: e.target.value })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    >
+                      <option value="">اختر النوع</option>
+                      <option value="عهدة">عهدة</option>
+                      <option value="مشتريات">مشتريات</option>
+                    </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       الحالة
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.SITUATION || ''}
                       onChange={(e) => setFormData({ ...formData, SITUATION: e.target.value })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    >
+                      <option value="">اختر الحالة</option>
+                      <option value="عاطل">عاطل</option>
+                      <option value="تحت الإصلاح">تحت الإصلاح</option>
+                      <option value="صالح">صالح</option>
+                      <option value="ورشة">ورشة</option>
+                    </select>
                   </div>
 
                   <div>

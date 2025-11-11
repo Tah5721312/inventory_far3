@@ -5,10 +5,12 @@ import { getAllFloors, createFloor } from '@/lib/db_utils';
 export async function GET() {
   try {
     const floors = await getAllFloors();
+    console.log('🏢 Fetched floors from DB:', floors);
+    console.log('🏢 Number of floors:', floors?.length || 0);
     return NextResponse.json({ success: true, data: floors }, { status: 200 });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Error fetching floors:', errorMessage);
+    console.error('❌ Error fetching floors:', errorMessage);
     return NextResponse.json(
       { success: false, error: 'فشل في جلب الطوابق', details: errorMessage },
       { status: 500 }

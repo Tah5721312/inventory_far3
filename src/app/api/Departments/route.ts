@@ -5,10 +5,12 @@ import { getAllDepartments, createDepartment } from '@/lib/db_utils';
 export async function GET() {
   try {
     const departments = await getAllDepartments();
+    console.log('📦 Fetched departments from DB:', departments);
+    console.log('📦 Number of departments:', departments?.length || 0);
     return NextResponse.json({ success: true, data: departments }, { status: 200 });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Error fetching departments:', errorMessage);
+    console.error('❌ Error fetching departments:', errorMessage);
     return NextResponse.json(
       { success: false, error: 'فشل في جلب الأقسام', details: errorMessage },
       { status: 500 }

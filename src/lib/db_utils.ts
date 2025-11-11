@@ -15,7 +15,7 @@ export async function getAllItems(filters?: {
   let query = `
     SELECT 
       i.ITEM_ID, i.ITEM_NAME, i.SERIAL, i.KIND, i.SITUATION, i.PROPERTIES,
-      i.HDD, i.RAM, i.IP, i.COMP_NAME,
+      i.HDD, i.RAM, i.IP, i.COMP_NAME, i.LOCK_NUM,
       i.USER_ID, u.FULL_NAME as ASSIGNED_USER,
       i.DEPT_ID, d.DEPT_NAME,
       i.FLOOR_ID, f.FLOOR_NAME,
@@ -67,7 +67,7 @@ export async function getItemById(id: number) {
   const query = `
     SELECT 
       i.ITEM_ID, i.ITEM_NAME, i.SERIAL, i.KIND, i.SITUATION, i.PROPERTIES,
-      i.HDD, i.RAM, i.IP, i.COMP_NAME,
+      i.HDD, i.RAM, i.IP, i.COMP_NAME, i.LOCK_NUM,
       i.USER_ID, u.FULL_NAME as ASSIGNED_USER,
       i.DEPT_ID, d.DEPT_NAME,
       i.FLOOR_ID, f.FLOOR_NAME,
@@ -112,7 +112,7 @@ export async function createItem(item: Omit<Item, 'ITEM_ID' | 'CREATED_AT' | 'UP
       ram: item.RAM || null,
       ip: item.IP || null,
       comp_name: item.COMP_NAME || null,
-      user_id: item.USER_ID || null,
+      user_id: item.USER_ID !== undefined ? item.USER_ID : null,
       dept_id: item.DEPT_ID || null,
       floor_id: item.FLOOR_ID || null,
       id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
@@ -158,10 +158,13 @@ export async function updateItem(id: number, item: Partial<Omit<Item, 'ITEM_ID'>
 
   Object.entries(item).forEach(([key, value]) => {
     // Only allow whitelisted columns
-    if (validColumns.has(key) && value !== undefined) {
-      const bindParamName = key;
-      setClauses.push(`${key} = :${bindParamName}`);
-      bindParams[bindParamName] = value;
+    if (validColumns.has(key)) {
+      // Allow null values (especially for USER_ID when item is in warehouse)
+      if (value !== undefined) {
+        const bindParamName = key;
+        setClauses.push(`${key} = :${bindParamName}`);
+        bindParams[bindParamName] = value === null ? null : value;
+      }
     } else if (!validColumns.has(key) && value !== undefined) {
       // Log warning for unexpected columns
       console.warn(`updateItem: Ignoring non-whitelisted column "${key}"`);
