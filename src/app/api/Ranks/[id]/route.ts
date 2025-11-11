@@ -48,19 +48,30 @@ export async function PUT(
     
     if (rowsAffected > 0) {
       return NextResponse.json(
-        { message: 'تم تحديث الرتبة بنجاح' },
+        { success: true, message: 'تم تحديث الرتبة بنجاح' },
         { status: 200 }
       );
     } else {
       return NextResponse.json(
-        { error: 'الرتبة غير موجودة' },
+        { success: false, error: 'الرتبة غير موجودة' },
         { status: 404 }
       );
     }
   } catch (error) {
-    console.error('Error updating rank:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Error updating rank:', errorMessage);
+    
+    // التحقق من نوع الخطأ
+    const errorString = errorMessage.toLowerCase();
+    if (errorString.includes('unique constraint') || errorString.includes('يوجد رتبة أخرى بنفس الاسم')) {
+      return NextResponse.json(
+        { success: false, error: 'يوجد رتبة أخرى بنفس الاسم بالفعل. الرجاء اختيار اسم آخر.' },
+        { status: 409 } // Conflict status code
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'فشل في تحديث الرتبة' },
+      { success: false, error: 'فشل في تحديث الرتبة', details: errorMessage },
       { status: 500 }
     );
   }

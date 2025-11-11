@@ -39,6 +39,16 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error creating department:', errorMessage);
+    
+    // التحقق من نوع الخطأ
+    const errorString = errorMessage.toLowerCase();
+    if (errorString.includes('unique constraint') || errorString.includes('يوجد قسم بنفس الاسم')) {
+      return NextResponse.json(
+        { success: false, error: 'يوجد قسم بنفس الاسم بالفعل. الرجاء اختيار اسم آخر.' },
+        { status: 409 } // Conflict status code
+      );
+    }
+    
     return NextResponse.json(
       { success: false, error: 'فشل في إنشاء القسم', details: errorMessage },
       { status: 500 }

@@ -32,6 +32,7 @@ export default function UnifiedManagementPage() {
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [deptFormData, setDeptFormData] = useState({ DEPT_NAME: '' });
   const [deptSubmitting, setDeptSubmitting] = useState(false);
+  const [deptError, setDeptError] = useState<string | null>(null);
 
   // Ranks State
   const [ranks, setRanks] = useState<Rank[]>([]);
@@ -41,6 +42,7 @@ export default function UnifiedManagementPage() {
   const [editingRank, setEditingRank] = useState<Rank | null>(null);
   const [rankFormData, setRankFormData] = useState({ RANK_NAME: '' });
   const [rankSubmitting, setRankSubmitting] = useState(false);
+  const [rankError, setRankError] = useState<string | null>(null);
 
   // Floors State
   const [floors, setFloors] = useState<Floor[]>([]);
@@ -50,6 +52,7 @@ export default function UnifiedManagementPage() {
   const [editingFloor, setEditingFloor] = useState<Floor | null>(null);
   const [floorFormData, setFloorFormData] = useState({ FLOOR_NAME: '' });
   const [floorSubmitting, setFloorSubmitting] = useState(false);
+  const [floorError, setFloorError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDepartments();
@@ -74,6 +77,7 @@ export default function UnifiedManagementPage() {
   const handleDeptSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setDeptSubmitting(true);
+    setDeptError(null);
     try {
       const url = editingDept ? `/api/departments/${editingDept.DEPT_ID}` : '/api/departments';
       const method = editingDept ? 'PUT' : 'POST';
@@ -82,12 +86,16 @@ export default function UnifiedManagementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(deptFormData),
       });
+      const data = await res.json();
       if (res.ok) {
         await fetchDepartments();
         closeDeptModal();
+      } else {
+        setDeptError(data.error || 'فشل في حفظ القسم');
       }
     } catch (error) {
       console.error('Error submitting:', error);
+      setDeptError('حدث خطأ أثناء حفظ القسم');
     } finally {
       setDeptSubmitting(false);
     }
@@ -111,6 +119,7 @@ export default function UnifiedManagementPage() {
       setEditingDept(null);
       setDeptFormData({ DEPT_NAME: '' });
     }
+    setDeptError(null);
     setIsDeptModalOpen(true);
   };
 
@@ -118,6 +127,7 @@ export default function UnifiedManagementPage() {
     setIsDeptModalOpen(false);
     setEditingDept(null);
     setDeptFormData({ DEPT_NAME: '' });
+    setDeptError(null);
   };
 
   // Ranks Functions
@@ -137,6 +147,7 @@ export default function UnifiedManagementPage() {
   const handleRankSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRankSubmitting(true);
+    setRankError(null);
     try {
       const url = editingRank ? `/api/ranks/${editingRank.RANK_ID}` : '/api/ranks';
       const method = editingRank ? 'PUT' : 'POST';
@@ -145,12 +156,16 @@ export default function UnifiedManagementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(rankFormData),
       });
+      const data = await res.json();
       if (res.ok) {
         await fetchRanks();
         closeRankModal();
+      } else {
+        setRankError(data.error || 'فشل في حفظ الرتبة');
       }
     } catch (error) {
       console.error('Error submitting:', error);
+      setRankError('حدث خطأ أثناء حفظ الرتبة');
     } finally {
       setRankSubmitting(false);
     }
@@ -174,6 +189,7 @@ export default function UnifiedManagementPage() {
       setEditingRank(null);
       setRankFormData({ RANK_NAME: '' });
     }
+    setRankError(null);
     setIsRankModalOpen(true);
   };
 
@@ -181,6 +197,7 @@ export default function UnifiedManagementPage() {
     setIsRankModalOpen(false);
     setEditingRank(null);
     setRankFormData({ RANK_NAME: '' });
+    setRankError(null);
   };
 
   // Floors Functions
@@ -200,6 +217,7 @@ export default function UnifiedManagementPage() {
   const handleFloorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFloorSubmitting(true);
+    setFloorError(null);
     try {
       const url = editingFloor ? `/api/floors/${editingFloor.FLOOR_ID}` : '/api/floors';
       const method = editingFloor ? 'PUT' : 'POST';
@@ -208,12 +226,16 @@ export default function UnifiedManagementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(floorFormData),
       });
+      const data = await res.json();
       if (res.ok) {
         await fetchFloors();
         closeFloorModal();
+      } else {
+        setFloorError(data.error || 'فشل في حفظ الطابق');
       }
     } catch (error) {
       console.error('Error submitting:', error);
+      setFloorError('حدث خطأ أثناء حفظ الطابق');
     } finally {
       setFloorSubmitting(false);
     }
@@ -237,6 +259,7 @@ export default function UnifiedManagementPage() {
       setEditingFloor(null);
       setFloorFormData({ FLOOR_NAME: '' });
     }
+    setFloorError(null);
     setIsFloorModalOpen(true);
   };
 
@@ -244,6 +267,7 @@ export default function UnifiedManagementPage() {
     setIsFloorModalOpen(false);
     setEditingFloor(null);
     setFloorFormData({ FLOOR_NAME: '' });
+    setFloorError(null);
   };
 
   const filteredDepartments = departments.filter((dept) =>
@@ -327,17 +351,19 @@ export default function UnifiedManagementPage() {
   const IconComponent = config.icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100" dir="rtl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className={`p-3 bg-gradient-to-br from-${config.color}-500 to-${config.color}-600 rounded-xl shadow-lg`}>
-              <IconComponent className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold text-slate-800">{config.title}</h1>
-              <p className="text-slate-600 mt-1">{config.subtitle}</p>
+        {/* Header - Modern & Responsive */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl shadow-xl p-5 sm:p-6 lg:p-8 mb-6 text-white">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-2.5 sm:p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-1">{config.title}</h1>
+                <p className="text-blue-100 text-sm sm:text-base">{config.subtitle}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -466,6 +492,11 @@ export default function UnifiedManagementPage() {
                 </h2>
               </div>
               <div className="p-6">
+                {deptError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{deptError}</p>
+                  </div>
+                )}
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     اسم القسم
@@ -473,8 +504,13 @@ export default function UnifiedManagementPage() {
                   <input
                     type="text"
                     value={deptFormData.DEPT_NAME}
-                    onChange={(e) => setDeptFormData({ ...deptFormData, DEPT_NAME: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    onChange={(e) => {
+                      setDeptFormData({ ...deptFormData, DEPT_NAME: e.target.value });
+                      setDeptError(null); // Clear error when user types
+                    }}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                      deptError ? 'border-red-300' : 'border-slate-200'
+                    }`}
                     required
                   />
                 </div>
@@ -508,6 +544,11 @@ export default function UnifiedManagementPage() {
                 </h2>
               </div>
               <div className="p-6">
+                {rankError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{rankError}</p>
+                  </div>
+                )}
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     اسم الرتبة
@@ -515,8 +556,13 @@ export default function UnifiedManagementPage() {
                   <input
                     type="text"
                     value={rankFormData.RANK_NAME}
-                    onChange={(e) => setRankFormData({ ...rankFormData, RANK_NAME: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    onChange={(e) => {
+                      setRankFormData({ ...rankFormData, RANK_NAME: e.target.value });
+                      setRankError(null); // Clear error when user types
+                    }}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${
+                      rankError ? 'border-red-300' : 'border-slate-200'
+                    }`}
                     required
                   />
                 </div>
@@ -550,6 +596,11 @@ export default function UnifiedManagementPage() {
                 </h2>
               </div>
               <div className="p-6">
+                {floorError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{floorError}</p>
+                  </div>
+                )}
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     اسم الطابق
@@ -557,8 +608,13 @@ export default function UnifiedManagementPage() {
                   <input
                     type="text"
                     value={floorFormData.FLOOR_NAME}
-                    onChange={(e) => setFloorFormData({ ...floorFormData, FLOOR_NAME: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    onChange={(e) => {
+                      setFloorFormData({ ...floorFormData, FLOOR_NAME: e.target.value });
+                      setFloorError(null); // Clear error when user types
+                    }}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                      floorError ? 'border-red-300' : 'border-slate-200'
+                    }`}
                     required
                   />
                 </div>

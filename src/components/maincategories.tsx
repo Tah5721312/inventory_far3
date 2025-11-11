@@ -55,7 +55,7 @@ const [formData, setFormData] = useState({ CAT_NAME: '', DESCRIPTION: '' });
   setEditingCategory(null);
   setFormData({ CAT_NAME: '', DESCRIPTION: '' });
 }
-
+    setNotification(null);
     setIsModalOpen(true);
   };
 
@@ -63,6 +63,7 @@ const [formData, setFormData] = useState({ CAT_NAME: '', DESCRIPTION: '' });
     setIsModalOpen(false);
     setEditingCategory(null);
     setFormData({ CAT_NAME: '', DESCRIPTION: '' });
+    setNotification(null);
   };
 
   const handleSubmit = async () => {
@@ -150,7 +151,6 @@ const [formData, setFormData] = useState({ CAT_NAME: '', DESCRIPTION: '' });
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
             إدارة التصنيفات الرئيسية
           </h1>
-          <p className="text-slate-600 text-lg">إدارة كاملة للتصنيفات مع واجهة عصرية</p>
         </div>
 
         {/* Controls Bar */}
@@ -251,6 +251,11 @@ const [formData, setFormData] = useState({ CAT_NAME: '', DESCRIPTION: '' });
             </div>
 
             <div className="p-6">
+              {notification && notification.type === 'error' && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600 text-right">{notification.message}</p>
+                </div>
+              )}
               <div className="mb-6">
                 <label className="block text-slate-700 font-semibold mb-3 text-right">
                   اسم التصنيف
@@ -258,8 +263,13 @@ const [formData, setFormData] = useState({ CAT_NAME: '', DESCRIPTION: '' });
                 <input
                   type="text"
                   value={formData.CAT_NAME}
-                 onChange={(e) => setFormData({ ...formData, CAT_NAME: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors text-right"
+                  onChange={(e) => {
+                    setFormData({ ...formData, CAT_NAME: e.target.value });
+                    if (notification) setNotification(null);
+                  }}
+                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors text-right ${
+                    notification && notification.type === 'error' ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-blue-500'
+                  }`}
                   placeholder="أدخل اسم التصنيف"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {

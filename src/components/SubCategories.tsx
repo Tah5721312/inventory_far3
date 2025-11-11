@@ -73,6 +73,7 @@ export default function SubCategoriesPage() {
       setEditingSubCategory(null);
       setFormData({ SUB_CAT_NAME: '', CAT_ID: '', DESCRIPTION: '' });
     }
+    setNotification(null);
     setIsModalOpen(true);
   };
 
@@ -80,6 +81,7 @@ export default function SubCategoriesPage() {
     setIsModalOpen(false);
     setEditingSubCategory(null);
     setFormData({ SUB_CAT_NAME: '', CAT_ID: '', DESCRIPTION: '' });
+    setNotification(null);
   };
 
   const handleSubmit = async () => {
@@ -172,7 +174,6 @@ export default function SubCategoriesPage() {
               إدارة التصنيفات الفرعية
             </h1>
           </div>
-          <p className="text-slate-600 text-lg">إدارة كاملة للتصنيفات الفرعية مع واجهة عصرية</p>
         </div>
 
         {/* Controls Bar */}
@@ -280,6 +281,11 @@ export default function SubCategoriesPage() {
             </div>
 
             <div className="p-6 space-y-6">
+              {notification && notification.type === 'error' && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600 text-right">{notification.message}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-slate-700 font-semibold mb-3 text-right">
                   اسم التصنيف الفرعي
@@ -287,8 +293,13 @@ export default function SubCategoriesPage() {
                 <input
                   type="text"
                   value={formData.SUB_CAT_NAME}
-                  onChange={(e) => setFormData({ ...formData, SUB_CAT_NAME: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors text-right"
+                  onChange={(e) => {
+                    setFormData({ ...formData, SUB_CAT_NAME: e.target.value });
+                    if (notification) setNotification(null);
+                  }}
+                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors text-right ${
+                    notification && notification.type === 'error' ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-blue-500'
+                  }`}
                   placeholder="أدخل اسم التصنيف الفرعي"
                 />
               </div>

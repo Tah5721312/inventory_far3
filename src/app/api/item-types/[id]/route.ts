@@ -57,9 +57,20 @@ export async function PUT(
       message: 'تم تحديث نوع الصنف بنجاح',
     });
   } catch (error) {
-    console.error('Error updating item type:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Error updating item type:', errorMessage);
+    
+    // التحقق من نوع الخطأ
+    const errorString = errorMessage.toLowerCase();
+    if (errorString.includes('unique constraint') || errorString.includes('يوجد نوع صنف آخر بنفس الاسم')) {
+      return NextResponse.json(
+        { success: false, error: 'يوجد نوع صنف آخر بنفس الاسم في هذا التصنيف الفرعي بالفعل. الرجاء اختيار اسم آخر.' },
+        { status: 409 } // Conflict status code
+      );
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'فشل في تحديث نوع الصنف' },
+      { success: false, error: 'فشل في تحديث نوع الصنف', details: errorMessage },
       { status: 500 }
     );
   }

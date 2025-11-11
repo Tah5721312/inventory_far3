@@ -61,6 +61,16 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error creating sub category:', errorMessage);
+    
+    // التحقق من نوع الخطأ
+    const errorString = errorMessage.toLowerCase();
+    if (errorString.includes('unique constraint') || errorString.includes('يوجد تصنيف فرعي بنفس الاسم')) {
+      return NextResponse.json(
+        { success: false, error: 'يوجد تصنيف فرعي بنفس الاسم في هذا التصنيف الرئيسي بالفعل. الرجاء اختيار اسم آخر.' },
+        { status: 409 } // Conflict status code
+      );
+    }
+    
     return NextResponse.json(
       { success: false, error: 'فشل في إضافة التصنيف الفرعي', details: errorMessage },
       { status: 500 }

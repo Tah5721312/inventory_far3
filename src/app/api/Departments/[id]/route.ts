@@ -48,19 +48,30 @@ export async function PUT(
     
     if (rowsAffected > 0) {
       return NextResponse.json(
-        { message: 'تم تحديث القسم بنجاح' },
+        { success: true, message: 'تم تحديث القسم بنجاح' },
         { status: 200 }
       );
     } else {
       return NextResponse.json(
-        { error: 'القسم غير موجود' },
+        { success: false, error: 'القسم غير موجود' },
         { status: 404 }
       );
     }
   } catch (error) {
-    console.error('Error updating department:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Error updating department:', errorMessage);
+    
+    // التحقق من نوع الخطأ
+    const errorString = errorMessage.toLowerCase();
+    if (errorString.includes('unique constraint') || errorString.includes('يوجد قسم آخر بنفس الاسم')) {
+      return NextResponse.json(
+        { success: false, error: 'يوجد قسم آخر بنفس الاسم بالفعل. الرجاء اختيار اسم آخر.' },
+        { status: 409 } // Conflict status code
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'فشل في تحديث القسم' },
+      { success: false, error: 'فشل في تحديث القسم', details: errorMessage },
       { status: 500 }
     );
   }

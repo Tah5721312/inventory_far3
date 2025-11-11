@@ -71,9 +71,20 @@ export async function PUT(
       },
     });
   } catch (error) {
-    console.error('Error updating main category:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Error updating main category:', errorMessage);
+    
+    // التحقق من نوع الخطأ
+    const errorString = errorMessage.toLowerCase();
+    if (errorString.includes('unique constraint') || errorString.includes('يوجد تصنيف رئيسي آخر بنفس الاسم')) {
+      return NextResponse.json(
+        { success: false, error: 'يوجد تصنيف رئيسي آخر بنفس الاسم بالفعل. الرجاء اختيار اسم آخر.' },
+        { status: 409 } // Conflict status code
+      );
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'فشل في تحديث التصنيف' },
+      { success: false, error: 'فشل في تحديث التصنيف', details: errorMessage },
       { status: 500 }
     );
   }

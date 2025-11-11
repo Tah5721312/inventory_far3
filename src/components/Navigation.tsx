@@ -7,7 +7,6 @@ import { useState } from 'react';
 // import { Can } from '@/components/Can';
 // import { Actions, Subjects } from '@/lib/ability';
 import ThemeToggle from '@/components/ThemeToggle';
-import GlobalSearch from '@/components/GlobalSearch';
 
 
 
@@ -24,11 +23,11 @@ export default function Navigation() {
     label: string;
     
   }> = [
-    { href: '/main-categories', label: 'main-categories'},
-    { href: '/sub-categories', label: 'sub-categories' },
-    { href: '/items', label: 'items' },
-    { href: '/item-type', label: 'item_type' },
-    { href: '/others', label: 'others' },
+    { href: '/main-categories', label: 'التصنيفات الرئيسية'},
+    { href: '/sub-categories', label: 'التصنيفات الفرعية' },
+    { href: '/items', label: 'الأصناف' },
+    { href: '/item-type', label: 'أنواع الأصناف' },
+    { href: '/others', label: 'أخرون' },
   ];
 
   return (
@@ -37,19 +36,14 @@ export default function Navigation() {
         <div className='flex justify-between items-center py-4'>
           <h1 className='text-lg md:text-xl font-bold'>
             <Link href={'/'} className="hover:opacity-80 transition-opacity">
-              Medical Clinic
-            </Link>
+            Inventory Management System            </Link>
           </h1>
 
           <div className='flex items-center gap-3'>
-            {/* Global Search */}
-            <div className="hidden md:block">
-              <GlobalSearch />
-            </div>
-
             {/* Desktop menu */}
             <div className='hidden md:flex items-center space-x-4 space-x-reverse'>
-              {commonItems.map((item) => (
+              {/* إظهار عناصر القائمة فقط عند تسجيل الدخول */}
+              {isAuthenticated && commonItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
@@ -75,7 +69,7 @@ export default function Navigation() {
                     }`}
                     onClick={() => setIsMobileOpen(false)}
                   >
-                    Login
+                    تسجيل الدخول
                   </Link>
                   <Link
                     href={'/register'}
@@ -86,7 +80,7 @@ export default function Navigation() {
                     }`}
                     onClick={() => setIsMobileOpen(false)}
                   >
-                    Register
+                    مستخدم جديد
                   </Link>
                 </>
               )}
@@ -102,14 +96,14 @@ export default function Navigation() {
                       }`}
                       onClick={() => setIsMobileOpen(false)}
                     >
-                      Profile
+                      المستخدم
                     </Link>
 
                   <button
                     onClick={() => signOut({ redirect: true, callbackUrl: '/login' })}
                     className='px-3 py-2 rounded-md text-sm font-medium text-blue-100 dark:text-text-muted hover:bg-blue-700 dark:hover:bg-dark-600 transition-colors duration-200'
                   >
-                    Logout
+                    تسجيل الخروج
                   </button>
                 </>
               )}
@@ -123,11 +117,6 @@ export default function Navigation() {
             {/* Theme Toggle - Mobile (visible on small screens) */}
             <div className="md:hidden">
               <ThemeToggle />
-            </div>
-
-            {/* Global Search - Mobile */}
-            <div className="md:hidden">
-              <GlobalSearch />
             </div>
 
             {/* Mobile hamburger */}
@@ -160,7 +149,8 @@ export default function Navigation() {
         {isMobileOpen && (
           <div className='md:hidden absolute left-0 right-0 top-full z-50 bg-blue-600/95 dark:bg-dark-800/95 backdrop-blur shadow-lg border-t border-blue-700 dark:border-dark-700'>
             <div className='flex flex-col space-y-2 px-4 pb-4 pt-2'>
-              {commonItems.map((item) => (
+              {/* إظهار عناصر القائمة فقط عند تسجيل الدخول */}
+              {isAuthenticated && commonItems.map((item) => (
                   <Link
                     key={`mobile-${item.href}`}
                     href={item.href}
@@ -192,7 +182,7 @@ export default function Navigation() {
                     }`}
                     onClick={() => setIsMobileOpen(false)}
                   >
-                    Login
+                    تسجيل الدخول
                   </Link>
                   <Link
                     href={'/register'}
@@ -203,7 +193,7 @@ export default function Navigation() {
                     }`}
                     onClick={() => setIsMobileOpen(false)}
                   >
-                    Register
+                    مستخدم جديد
                   </Link>
                 </>
               )}
@@ -219,7 +209,7 @@ export default function Navigation() {
                       }`}
                       onClick={() => setIsMobileOpen(false)}
                     >
-                      Profile
+                      المستخدم
                     </Link>
 
                   <button
@@ -229,7 +219,7 @@ export default function Navigation() {
                     }}
                     className='block text-left px-3 py-2 rounded-md text-base font-medium text-blue-100 dark:text-text-muted hover:bg-blue-700 dark:hover:bg-dark-600 transition-colors duration-200'
                   >
-                    Logout
+                    تسجيل الخروج
                   </button>
                 </>
               )}

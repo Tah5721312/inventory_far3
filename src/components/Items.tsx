@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, X, Save, Filter } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, Save, Filter, BarChart3 } from 'lucide-react';
+import Link from 'next/link';
 
 interface Item {
   ITEM_ID: number;
@@ -396,13 +397,22 @@ export default function ItemsPage() {
               </div>
               <p className="text-blue-100 text-sm sm:text-base ml-14 sm:ml-0">عرض وإدارة جميع الأصناف والأجهزة في النظام</p>
             </div>
-            <button
-              onClick={() => openModal()}
-              className="flex items-center justify-center gap-2 bg-white text-blue-600 px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 whitespace-nowrap"
-            >
-              <Plus size={20} />
-              <span>إضافة صنف جديد</span>
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/statistics"
+                className="flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 whitespace-nowrap backdrop-blur-sm border border-white/30"
+              >
+                <BarChart3 size={20} />
+                <span>الإحصائيات</span>
+              </Link>
+              <button
+                onClick={() => openModal()}
+                className="flex items-center justify-center gap-2 bg-white text-blue-600 px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 whitespace-nowrap"
+              >
+                <Plus size={20} />
+                <span>إضافة صنف جديد</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -486,27 +496,6 @@ export default function ItemsPage() {
               </div>
             </div>
           )}
-        </div>
-
-        {/* Stats & Items Count - Modern */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200/50 p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <div className="text-2xl sm:text-3xl font-bold text-blue-600">{filteredItems.length}</div>
-                <div className="text-xs sm:text-sm text-slate-600 mt-1">عدد الأصناف</div>
-              </div>
-              <div className="hidden sm:block h-12 w-px bg-slate-200"></div>
-              <div className="text-sm text-slate-600">
-                {searchTerm && (
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg">
-                    <Search size={14} />
-                    نتائج البحث: {filteredItems.length}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Items Display - Modern & Responsive */}

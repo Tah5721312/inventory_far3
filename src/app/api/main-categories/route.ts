@@ -51,6 +51,16 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error creating main category:', errorMessage);
+    
+    // التحقق من نوع الخطأ
+    const errorString = errorMessage.toLowerCase();
+    if (errorString.includes('unique constraint') || errorString.includes('يوجد تصنيف رئيسي بنفس الاسم')) {
+      return NextResponse.json(
+        { success: false, error: 'يوجد تصنيف رئيسي بنفس الاسم بالفعل. الرجاء اختيار اسم آخر.' },
+        { status: 409 } // Conflict status code
+      );
+    }
+    
     return NextResponse.json(
       { success: false, error: 'فشل في إضافة التصنيف', details: errorMessage },
       { status: 500 }

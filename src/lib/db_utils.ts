@@ -312,12 +312,24 @@ export async function createSubCategory(subCategory: {
   CAT_ID: number; 
   DESCRIPTION?: string 
 }) {
+    // التحقق من وجود تصنيف فرعي بنفس الاسم في نفس التصنيف الرئيسي
+    const existingSubCat = await executeQuery<{ SUB_CAT_ID: number }>(
+        `SELECT SUB_CAT_ID FROM far3.SUB_CATEGORIES 
+         WHERE UPPER(TRIM(SUB_CAT_NAME)) = UPPER(TRIM(:sub_cat_name)) 
+         AND CAT_ID = :cat_id`,
+        { sub_cat_name: subCategory.SUB_CAT_NAME, cat_id: subCategory.CAT_ID }
+    );
+
+    if (existingSubCat.rows.length > 0) {
+        throw new Error('يوجد تصنيف فرعي بنفس الاسم في هذا التصنيف الرئيسي بالفعل');
+    }
+
     const result = await executeReturningQuery<{ sub_cat_id: number }>(
         `INSERT INTO far3.SUB_CATEGORIES (SUB_CAT_NAME, CAT_ID, DESCRIPTION) 
          VALUES (:sub_cat_name, :cat_id, :description) 
          RETURNING SUB_CAT_ID INTO :id`,
         {
-            sub_cat_name: subCategory.SUB_CAT_NAME,
+            sub_cat_name: subCategory.SUB_CAT_NAME.trim(),
             cat_id: subCategory.CAT_ID,
             description: subCategory.DESCRIPTION || null,
             id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
@@ -332,12 +344,45 @@ export async function createSubCategory(subCategory: {
 }
 
 export async function updateSubCategory(id: number, subCategory: { SUB_CAT_NAME?: string; CAT_ID?: number ; DESCRIPTION?: string }) {
+    // الحصول على البيانات الحالية إذا تم تحديث CAT_ID أو SUB_CAT_NAME
+    let currentCatId = subCategory.CAT_ID;
+    if (subCategory.CAT_ID === undefined || subCategory.SUB_CAT_NAME !== undefined) {
+        const current = await executeQuery<{ CAT_ID: number; SUB_CAT_NAME: string }>(
+            `SELECT CAT_ID, SUB_CAT_NAME FROM far3.SUB_CATEGORIES WHERE SUB_CAT_ID = :id`,
+            { id }
+        );
+        if (current.rows.length > 0) {
+            if (currentCatId === undefined) {
+                currentCatId = current.rows[0].CAT_ID;
+            }
+        }
+    }
+
+    // التحقق من وجود تصنيف فرعي آخر بنفس الاسم في نفس التصنيف الرئيسي (باستثناء التصنيف الفرعي الحالي)
+    if (subCategory.SUB_CAT_NAME !== undefined) {
+        const existingSubCat = await executeQuery<{ SUB_CAT_ID: number }>(
+            `SELECT SUB_CAT_ID FROM far3.SUB_CATEGORIES 
+             WHERE UPPER(TRIM(SUB_CAT_NAME)) = UPPER(TRIM(:sub_cat_name)) 
+             AND CAT_ID = :cat_id 
+             AND SUB_CAT_ID != :id`,
+            { 
+                sub_cat_name: subCategory.SUB_CAT_NAME, 
+                cat_id: currentCatId, 
+                id 
+            }
+        );
+
+        if (existingSubCat.rows.length > 0) {
+            throw new Error('يوجد تصنيف فرعي آخر بنفس الاسم في هذا التصنيف الرئيسي بالفعل');
+        }
+    }
+
     const setClauses: string[] = [];
     const bindParams: oracledb.BindParameters = { id };
 
     if (subCategory.SUB_CAT_NAME !== undefined) {
         setClauses.push('SUB_CAT_NAME = :sub_cat_name');
-        bindParams.sub_cat_name = subCategory.SUB_CAT_NAME;
+        bindParams.sub_cat_name = subCategory.SUB_CAT_NAME.trim();
     }
     if (subCategory.CAT_ID !== undefined) {
         setClauses.push('CAT_ID = :cat_id');
@@ -384,10 +429,21 @@ export async function getMainCategoryById(id: number) {
 }
 
 export async function createMainCategory(mainCategory: { CAT_NAME: string, DESCRIPTION: string }) {
+    // التحقق من وجود تصنيف رئيسي بنفس الاسم
+    const existingCat = await executeQuery<{ CAT_ID: number }>(
+        `SELECT CAT_ID FROM far3.MAIN_CATEGORIES 
+         WHERE UPPER(TRIM(CAT_NAME)) = UPPER(TRIM(:cat_name))`,
+        { cat_name: mainCategory.CAT_NAME }
+    );
+
+    if (existingCat.rows.length > 0) {
+        throw new Error('يوجد تصنيف رئيسي بنفس الاسم بالفعل');
+    }
+
     const result = await executeReturningQuery<{ cat_id: number }>(
         `INSERT INTO far3.MAIN_CATEGORIES (CAT_NAME ,DESCRIPTION) VALUES (:cat_name, :description) RETURNING CAT_ID INTO :id`,
         {
-            cat_name: mainCategory.CAT_NAME,
+            cat_name: mainCategory.CAT_NAME.trim(),
             description: mainCategory.DESCRIPTION,
             id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
         }
@@ -403,12 +459,26 @@ export async function updateMainCategory(
   id: number,
   mainCategory: { CAT_NAME?: string; DESCRIPTION?: string }
 ) {
+  // التحقق من وجود تصنيف رئيسي آخر بنفس الاسم (باستثناء التصنيف الرئيسي الحالي)
+  if (mainCategory.CAT_NAME !== undefined) {
+    const existingCat = await executeQuery<{ CAT_ID: number }>(
+      `SELECT CAT_ID FROM far3.MAIN_CATEGORIES 
+       WHERE UPPER(TRIM(CAT_NAME)) = UPPER(TRIM(:cat_name)) 
+       AND CAT_ID != :id`,
+      { cat_name: mainCategory.CAT_NAME, id }
+    );
+
+    if (existingCat.rows.length > 0) {
+      throw new Error('يوجد تصنيف رئيسي آخر بنفس الاسم بالفعل');
+    }
+  }
+
   const setClauses: string[] = [];
   const bindParams: oracledb.BindParameters = { id };
 
   if (mainCategory.CAT_NAME !== undefined) {
     setClauses.push('CAT_NAME = :cat_name');
-    bindParams.cat_name = mainCategory.CAT_NAME;
+    bindParams.cat_name = mainCategory.CAT_NAME.trim();
   }
 
   if (mainCategory.DESCRIPTION !== undefined) {
@@ -456,10 +526,22 @@ export async function getItemTypeById(id: number) {
 }
 
 export async function createItemType(itemType: { ITEM_TYPE_NAME: string; SUB_CAT_ID: number }) {
+    // التحقق من وجود نوع صنف بنفس الاسم في نفس التصنيف الفرعي
+    const existingItemType = await executeQuery<{ ITEM_TYPE_ID: number }>(
+        `SELECT ITEM_TYPE_ID FROM far3.ITEM_TYPES 
+         WHERE UPPER(TRIM(ITEM_TYPE_NAME)) = UPPER(TRIM(:item_type_name)) 
+         AND SUB_CAT_ID = :sub_cat_id`,
+        { item_type_name: itemType.ITEM_TYPE_NAME, sub_cat_id: itemType.SUB_CAT_ID }
+    );
+
+    if (existingItemType.rows.length > 0) {
+        throw new Error('يوجد نوع صنف بنفس الاسم في هذا التصنيف الفرعي بالفعل');
+    }
+
     const result = await executeReturningQuery<{ item_type_id: number }>(
         `INSERT INTO far3.ITEM_TYPES (ITEM_TYPE_NAME, SUB_CAT_ID) VALUES (:item_type_name, :sub_cat_id) RETURNING ITEM_TYPE_ID INTO :id`,
         {
-            item_type_name: itemType.ITEM_TYPE_NAME,
+            item_type_name: itemType.ITEM_TYPE_NAME.trim(),
             sub_cat_id: itemType.SUB_CAT_ID,
             id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
         }
@@ -473,12 +555,45 @@ export async function createItemType(itemType: { ITEM_TYPE_NAME: string; SUB_CAT
 }
 
 export async function updateItemType(id: number, itemType: { ITEM_TYPE_NAME?: string; SUB_CAT_ID?: number }) {
+    // الحصول على البيانات الحالية إذا تم تحديث SUB_CAT_ID أو ITEM_TYPE_NAME
+    let currentSubCatId = itemType.SUB_CAT_ID;
+    if (itemType.SUB_CAT_ID === undefined || itemType.ITEM_TYPE_NAME !== undefined) {
+        const current = await executeQuery<{ SUB_CAT_ID: number; ITEM_TYPE_NAME: string }>(
+            `SELECT SUB_CAT_ID, ITEM_TYPE_NAME FROM far3.ITEM_TYPES WHERE ITEM_TYPE_ID = :id`,
+            { id }
+        );
+        if (current.rows.length > 0) {
+            if (currentSubCatId === undefined) {
+                currentSubCatId = current.rows[0].SUB_CAT_ID;
+            }
+        }
+    }
+
+    // التحقق من وجود نوع صنف آخر بنفس الاسم في نفس التصنيف الفرعي (باستثناء النوع الحالي)
+    if (itemType.ITEM_TYPE_NAME !== undefined) {
+        const existingItemType = await executeQuery<{ ITEM_TYPE_ID: number }>(
+            `SELECT ITEM_TYPE_ID FROM far3.ITEM_TYPES 
+             WHERE UPPER(TRIM(ITEM_TYPE_NAME)) = UPPER(TRIM(:item_type_name)) 
+             AND SUB_CAT_ID = :sub_cat_id 
+             AND ITEM_TYPE_ID != :id`,
+            { 
+                item_type_name: itemType.ITEM_TYPE_NAME, 
+                sub_cat_id: currentSubCatId, 
+                id 
+            }
+        );
+
+        if (existingItemType.rows.length > 0) {
+            throw new Error('يوجد نوع صنف آخر بنفس الاسم في هذا التصنيف الفرعي بالفعل');
+        }
+    }
+
     const setClauses: string[] = [];
     const bindParams: oracledb.BindParameters = { id };
 
     if (itemType.ITEM_TYPE_NAME !== undefined) {
         setClauses.push('ITEM_TYPE_NAME = :item_type_name');
-        bindParams.item_type_name = itemType.ITEM_TYPE_NAME;
+        bindParams.item_type_name = itemType.ITEM_TYPE_NAME.trim();
     }
     if (itemType.SUB_CAT_ID !== undefined) {
         setClauses.push('SUB_CAT_ID = :sub_cat_id');
@@ -519,6 +634,16 @@ export async function getDepartmentById(id: number) {
 }
 
 export async function createDepartment(department: { DEPT_NAME: string }) {
+  // التحقق من وجود قسم بنفس الاسم
+  const existingDept = await executeQuery<{ DEPT_ID: number }>(
+    `SELECT DEPT_ID FROM far3.DEPARTMENTS WHERE UPPER(TRIM(DEPT_NAME)) = UPPER(TRIM(:dept_name))`,
+    { dept_name: department.DEPT_NAME }
+  );
+
+  if (existingDept.rows.length > 0) {
+    throw new Error('يوجد قسم بنفس الاسم بالفعل');
+  }
+
   const nextIdResult = await executeQuery<{ NEXT_ID: number }>(
     `SELECT NVL(MAX(DEPT_ID),0) + 1 AS NEXT_ID FROM far3.DEPARTMENTS`
   );
@@ -530,7 +655,7 @@ export async function createDepartment(department: { DEPT_NAME: string }) {
      RETURNING DEPT_ID INTO :id`,
     {
       dept_id: nextId,
-      dept_name: department.DEPT_NAME,
+      dept_name: department.DEPT_NAME.trim(),
       id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
     }
   );
@@ -545,8 +670,20 @@ export async function updateDepartment(id: number, department: { DEPT_NAME?: str
     const bindParams: oracledb.BindParameters = { id };
 
     if (department.DEPT_NAME !== undefined) {
+        // التحقق من وجود قسم آخر بنفس الاسم (باستثناء القسم الحالي)
+        const existingDept = await executeQuery<{ DEPT_ID: number }>(
+            `SELECT DEPT_ID FROM far3.DEPARTMENTS 
+             WHERE UPPER(TRIM(DEPT_NAME)) = UPPER(TRIM(:dept_name)) 
+             AND DEPT_ID != :id`,
+            { dept_name: department.DEPT_NAME, id }
+        );
+
+        if (existingDept.rows.length > 0) {
+            throw new Error('يوجد قسم آخر بنفس الاسم بالفعل');
+        }
+
         setClauses.push('DEPT_NAME = :dept_name');
-        bindParams.dept_name = department.DEPT_NAME;
+        bindParams.dept_name = department.DEPT_NAME.trim();
     }
 
     if (setClauses.length === 0) {
@@ -582,6 +719,16 @@ export async function getRankById(id: number) {
 
 
 export async function createRank(rank: { RANK_NAME: string }) {
+  // التحقق من وجود Rank بنفس الاسم
+  const existingRank = await executeQuery<{ RANK_ID: number }>(
+    `SELECT RANK_ID FROM far3.RANKS WHERE UPPER(TRIM(RANK_NAME)) = UPPER(TRIM(:rank_name))`,
+    { rank_name: rank.RANK_NAME }
+  );
+
+  if (existingRank.rows.length > 0) {
+    throw new Error('يوجد رتبة بنفس الاسم بالفعل');
+  }
+
   const nextIdResult = await executeQuery<{ NEXT_ID: number }>(
     `SELECT NVL(MAX(RANK_ID), 0) + 1 AS NEXT_ID FROM far3.RANKS`
   );
@@ -593,7 +740,7 @@ export async function createRank(rank: { RANK_NAME: string }) {
      RETURNING RANK_ID INTO :id`,
     {
       rank_id: nextId,
-      rank_name: rank.RANK_NAME,
+      rank_name: rank.RANK_NAME.trim(),
       id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
     }
   );
@@ -609,8 +756,20 @@ export async function updateRank(id: number, rank: { RANK_NAME?: string }) {
   const bindParams: oracledb.BindParameters = { id };
 
   if (rank.RANK_NAME !== undefined) {
+    // التحقق من وجود Rank آخر بنفس الاسم (باستثناء الرتبة الحالية)
+    const existingRank = await executeQuery<{ RANK_ID: number }>(
+      `SELECT RANK_ID FROM far3.RANKS 
+       WHERE UPPER(TRIM(RANK_NAME)) = UPPER(TRIM(:rank_name)) 
+       AND RANK_ID != :id`,
+      { rank_name: rank.RANK_NAME, id }
+    );
+
+    if (existingRank.rows.length > 0) {
+      throw new Error('يوجد رتبة أخرى بنفس الاسم بالفعل');
+    }
+
     setClauses.push('RANK_NAME = :rank_name');
-    bindParams.rank_name = rank.RANK_NAME;
+    bindParams.rank_name = rank.RANK_NAME.trim();
   }
 
   if (setClauses.length === 0) {
@@ -646,6 +805,16 @@ export async function getFloorById(id: number) {
 
 
 export async function createFloor(floor: { FLOOR_NAME: string }) {
+  // التحقق من وجود طابق بنفس الاسم
+  const existingFloor = await executeQuery<{ FLOOR_ID: number }>(
+    `SELECT FLOOR_ID FROM far3.FLOORS WHERE UPPER(TRIM(FLOOR_NAME)) = UPPER(TRIM(:floor_name))`,
+    { floor_name: floor.FLOOR_NAME }
+  );
+
+  if (existingFloor.rows.length > 0) {
+    throw new Error('يوجد طابق بنفس الاسم بالفعل');
+  }
+
   // أولاً نحصل على رقم جديد يساوي أكبر FLOOR_ID + 1
   const nextIdResult = await executeQuery<{ NEXT_ID: number }>(
     `SELECT NVL(MAX(FLOOR_ID), 0) + 1 AS NEXT_ID FROM far3.FLOORS`
@@ -660,7 +829,7 @@ export async function createFloor(floor: { FLOOR_NAME: string }) {
      RETURNING FLOOR_ID INTO :id`,
     {
       floor_id: nextId,
-      floor_name: floor.FLOOR_NAME,
+      floor_name: floor.FLOOR_NAME.trim(),
       id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
     }
   );
@@ -682,8 +851,20 @@ export async function updateFloor(id: number, floor: { FLOOR_NAME?: string }) {
   const bindParams: oracledb.BindParameters = { id };
 
   if (floor.FLOOR_NAME !== undefined) {
+    // التحقق من وجود طابق آخر بنفس الاسم (باستثناء الطابق الحالي)
+    const existingFloor = await executeQuery<{ FLOOR_ID: number }>(
+      `SELECT FLOOR_ID FROM far3.FLOORS 
+       WHERE UPPER(TRIM(FLOOR_NAME)) = UPPER(TRIM(:floor_name)) 
+       AND FLOOR_ID != :id`,
+      { floor_name: floor.FLOOR_NAME, id }
+    );
+
+    if (existingFloor.rows.length > 0) {
+      throw new Error('يوجد طابق آخر بنفس الاسم بالفعل');
+    }
+
     setClauses.push('FLOOR_NAME = :floor_name');
-    bindParams.floor_name = floor.FLOOR_NAME;
+    bindParams.floor_name = floor.FLOOR_NAME.trim();
   }
 
   if (setClauses.length === 0) {
@@ -699,4 +880,188 @@ export async function deleteFloor(id: number) {
   const query = `DELETE FROM far3.FLOORS WHERE FLOOR_ID = :id`;
   const result = await executeQuery(query, { id });
   return result.rowsAffected || 0;
+}
+
+/**
+ * جلب إحصائيات شاملة عن المشروع
+ */
+export async function getStatistics() {
+  try {
+    // إحصائيات التصنيفات الرئيسية
+    const mainCategoriesQuery = `
+      SELECT 
+        mc.CAT_ID,
+        mc.CAT_NAME,
+        COUNT(i.ITEM_ID) as ITEM_COUNT
+      FROM far3.MAIN_CATEGORIES mc
+      LEFT JOIN far3.SUB_CATEGORIES sc ON mc.CAT_ID = sc.CAT_ID
+      LEFT JOIN far3.ITEMS i ON sc.SUB_CAT_ID = i.SUB_CAT_ID
+      GROUP BY mc.CAT_ID, mc.CAT_NAME
+      ORDER BY mc.CAT_NAME
+    `;
+
+    // إحصائيات التصنيفات الفرعية
+    const subCategoriesQuery = `
+      SELECT 
+        sc.SUB_CAT_ID,
+        sc.SUB_CAT_NAME,
+        mc.CAT_NAME as MAIN_CATEGORY_NAME,
+        COUNT(i.ITEM_ID) as ITEM_COUNT
+      FROM far3.SUB_CATEGORIES sc
+      LEFT JOIN far3.MAIN_CATEGORIES mc ON sc.CAT_ID = mc.CAT_ID
+      LEFT JOIN far3.ITEMS i ON sc.SUB_CAT_ID = i.SUB_CAT_ID
+      GROUP BY sc.SUB_CAT_ID, sc.SUB_CAT_NAME, mc.CAT_NAME
+      ORDER BY mc.CAT_NAME, sc.SUB_CAT_NAME
+    `;
+
+    // إحصائيات أنواع الأصناف (مع التصنيف الرئيسي والفرعي)
+    const itemTypesQuery = `
+      SELECT 
+        it.ITEM_TYPE_ID,
+        it.ITEM_TYPE_NAME,
+        sc.SUB_CAT_ID,
+        sc.SUB_CAT_NAME,
+        mc.CAT_ID,
+        mc.CAT_NAME as MAIN_CATEGORY_NAME,
+        COUNT(i.ITEM_ID) as ITEM_COUNT
+      FROM far3.ITEM_TYPES it
+      LEFT JOIN far3.SUB_CATEGORIES sc ON it.SUB_CAT_ID = sc.SUB_CAT_ID
+      LEFT JOIN far3.MAIN_CATEGORIES mc ON sc.CAT_ID = mc.CAT_ID
+      LEFT JOIN far3.ITEMS i ON it.ITEM_TYPE_ID = i.ITEM_TYPE_ID
+      GROUP BY it.ITEM_TYPE_ID, it.ITEM_TYPE_NAME, sc.SUB_CAT_ID, sc.SUB_CAT_NAME, mc.CAT_ID, mc.CAT_NAME
+      ORDER BY mc.CAT_NAME, sc.SUB_CAT_NAME, it.ITEM_TYPE_NAME
+    `;
+
+    // إحصائيات الأقسام
+    const departmentsQuery = `
+      SELECT 
+        d.DEPT_ID,
+        d.DEPT_NAME,
+        COUNT(i.ITEM_ID) as ITEM_COUNT
+      FROM far3.DEPARTMENTS d
+      LEFT JOIN far3.ITEMS i ON d.DEPT_ID = i.DEPT_ID
+      GROUP BY d.DEPT_ID, d.DEPT_NAME
+      ORDER BY d.DEPT_NAME
+    `;
+
+    // إحصائيات الطوابق
+    const floorsQuery = `
+      SELECT 
+        f.FLOOR_ID,
+        f.FLOOR_NAME,
+        COUNT(i.ITEM_ID) as ITEM_COUNT
+      FROM far3.FLOORS f
+      LEFT JOIN far3.ITEMS i ON f.FLOOR_ID = i.FLOOR_ID
+      GROUP BY f.FLOOR_ID, f.FLOOR_NAME
+      ORDER BY f.FLOOR_NAME
+    `;
+
+    // إحصائيات الحالة
+    const situationQuery = `
+      SELECT 
+        SITUATION,
+        COUNT(ITEM_ID) as ITEM_COUNT
+      FROM far3.ITEMS
+      WHERE SITUATION IS NOT NULL
+      GROUP BY SITUATION
+      ORDER BY SITUATION
+    `;
+
+    // إحصائيات النوع (KIND)
+    const kindQuery = `
+      SELECT 
+        KIND,
+        COUNT(ITEM_ID) as ITEM_COUNT
+      FROM far3.ITEMS
+      WHERE KIND IS NOT NULL
+      GROUP BY KIND
+      ORDER BY KIND
+    `;
+
+    // إحصائيات المستخدمين
+    const usersQuery = `
+      SELECT 
+        u.USER_ID,
+        u.FULL_NAME as USER_NAME,
+        COUNT(i.ITEM_ID) as ITEM_COUNT
+      FROM far3.USERS u
+      LEFT JOIN far3.ITEMS i ON u.USER_ID = i.USER_ID
+      GROUP BY u.USER_ID, u.FULL_NAME
+      ORDER BY u.FULL_NAME
+    `;
+
+    // إحصائية المخزن (الأصناف بدون مستخدم)
+    const warehouseQuery = `
+      SELECT COUNT(ITEM_ID) as ITEM_COUNT
+      FROM far3.ITEMS
+      WHERE USER_ID IS NULL
+    `;
+
+    // إجمالي عدد الأصناف
+    const totalItemsQuery = `
+      SELECT COUNT(ITEM_ID) as TOTAL_COUNT
+      FROM far3.ITEMS
+    `;
+
+    // تنفيذ جميع الاستعلامات
+    const [
+      mainCategories,
+      subCategories,
+      itemTypes,
+      departments,
+      floors,
+      situations,
+      kinds,
+      users,
+      warehouse,
+      totalItems
+    ] = await Promise.all([
+      executeQuery(mainCategoriesQuery),
+      executeQuery(subCategoriesQuery),
+      executeQuery(itemTypesQuery),
+      executeQuery(departmentsQuery),
+      executeQuery(floorsQuery),
+      executeQuery(situationQuery),
+      executeQuery(kindQuery),
+      executeQuery(usersQuery),
+      executeQuery(warehouseQuery),
+      executeQuery(totalItemsQuery)
+    ]);
+
+    // تنظيف البيانات من Oracle objects
+    const cleanOracleRow = (row: any) => {
+      if (!row) return null;
+      const cleaned: any = {};
+      for (const key in row) {
+        if (row.hasOwnProperty(key)) {
+          const value = row[key];
+          // تحويل Oracle number إلى JavaScript number
+          if (typeof value === 'object' && value !== null && 'toNumber' in value) {
+            cleaned[key] = Number(value);
+          } else if (value instanceof Number) {
+            cleaned[key] = Number(value);
+          } else {
+            cleaned[key] = value;
+          }
+        }
+      }
+      return cleaned;
+    };
+
+    return {
+      mainCategories: mainCategories.rows.map(cleanOracleRow),
+      subCategories: subCategories.rows.map(cleanOracleRow),
+      itemTypes: itemTypes.rows.map(cleanOracleRow),
+      departments: departments.rows.map(cleanOracleRow),
+      floors: floors.rows.map(cleanOracleRow),
+      situations: situations.rows.map(cleanOracleRow),
+      kinds: kinds.rows.map(cleanOracleRow),
+      users: users.rows.map(cleanOracleRow),
+      warehouse: cleanOracleRow(warehouse.rows[0]),
+      totalItems: cleanOracleRow(totalItems.rows[0])
+    };
+  } catch (error) {
+    console.error('Error in getStatistics:', error);
+    throw error;
+  }
 }

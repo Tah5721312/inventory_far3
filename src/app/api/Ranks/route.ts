@@ -36,6 +36,16 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error creating rank:', errorMessage);
+    
+    // التحقق من نوع الخطأ
+    const errorString = errorMessage.toLowerCase();
+    if (errorString.includes('unique constraint') || errorString.includes('يوجد رتبة بنفس الاسم')) {
+      return NextResponse.json(
+        { success: false, error: 'يوجد رتبة بنفس الاسم بالفعل. الرجاء اختيار اسم آخر.' },
+        { status: 409 } // Conflict status code
+      );
+    }
+    
     return NextResponse.json(
       { success: false, error: 'فشل في إنشاء الرتبة', details: errorMessage },
       { status: 500 }

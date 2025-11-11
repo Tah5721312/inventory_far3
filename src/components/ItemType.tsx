@@ -73,6 +73,7 @@ export default function ItemTypesPage() {
       setEditingItemType(null);
       setFormData({ ITEM_TYPE_NAME: '', SUB_CAT_ID: '' });
     }
+    setNotification(null);
     setIsModalOpen(true);
   };
 
@@ -80,6 +81,7 @@ export default function ItemTypesPage() {
     setIsModalOpen(false);
     setEditingItemType(null);
     setFormData({ ITEM_TYPE_NAME: '', SUB_CAT_ID: '' });
+    setNotification(null);
   };
 
   const handleSubmit = async () => {
@@ -165,13 +167,12 @@ export default function ItemTypesPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
-          <div className="flex items-center justify-center gap-3 mb-3">
+          <div className="flex items-center justify-center gap-3 mb-5">
             <Package className="w-12 h-12 text-purple-600" />
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               إدارة أنواع الأصناف
             </h1>
           </div>
-          <p className="text-slate-600 text-lg">إدارة كاملة لأنواع الأصناف مع واجهة عصرية</p>
         </div>
 
         {/* Controls Bar */}
@@ -194,39 +195,6 @@ export default function ItemTypesPage() {
               <Plus className="w-5 h-5" />
               إضافة نوع صنف جديد
             </button>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm mb-1">إجمالي الأنواع</p>
-                <p className="text-3xl font-bold">{itemTypes.length}</p>
-              </div>
-              <Package className="w-12 h-12 text-purple-200" />
-            </div>
-          </div>
-          
-          <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-pink-100 text-sm mb-1">نتائج البحث</p>
-                <p className="text-3xl font-bold">{filteredItemTypes.length}</p>
-              </div>
-              <Search className="w-12 h-12 text-pink-200" />
-            </div>
-          </div>
-          
-          <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-indigo-100 text-sm mb-1">التصنيفات الفرعية</p>
-                <p className="text-3xl font-bold">{subCategories.length}</p>
-              </div>
-              <FolderTree className="w-12 h-12 text-indigo-200" />
-            </div>
           </div>
         </div>
 
@@ -307,6 +275,11 @@ export default function ItemTypesPage() {
             </div>
 
             <div className="p-6 space-y-6">
+              {notification && notification.type === 'error' && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600 text-right">{notification.message}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-slate-700 font-semibold mb-3 text-right">
                   اسم نوع الصنف
@@ -314,8 +287,13 @@ export default function ItemTypesPage() {
                 <input
                   type="text"
                   value={formData.ITEM_TYPE_NAME}
-                  onChange={(e) => setFormData({ ...formData, ITEM_TYPE_NAME: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:outline-none transition-colors text-right"
+                  onChange={(e) => {
+                    setFormData({ ...formData, ITEM_TYPE_NAME: e.target.value });
+                    if (notification) setNotification(null);
+                  }}
+                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors text-right ${
+                    notification && notification.type === 'error' ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-purple-500'
+                  }`}
                   placeholder="أدخل اسم نوع الصنف"
                 />
               </div>
