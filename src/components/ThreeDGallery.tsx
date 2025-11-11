@@ -9,15 +9,15 @@ const ThreeDGallery: React.FC = () => {
       <div className={styles.gallery}>
         <div
           className={styles.image}
-          style={{ backgroundImage: "url('/clinic_logo.png')" }}
+          style={{ backgroundImage: "url('/3dimage.png')" }}
         ></div>
         <div
           className={styles.image}
-          style={{ backgroundImage: "url('/clinic_logo2.png')" }}
+          style={{ backgroundImage: "url('/3dimage2.png')" }}
         ></div>
         <div
           className={styles.image}
-          style={{ backgroundImage: "url('/clinic_logo3.png')" }}
+          style={{ backgroundImage: "url('/3dimage3.png')" }}
         ></div>
         {/* لإضافة صور لاحقًا */}
         {/* <div className={styles.image} style={{ backgroundImage: "url('/4.jpg')" }}></div>

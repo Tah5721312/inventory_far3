@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { 
   Package, 
@@ -17,6 +18,7 @@ import {
   Shield,
   TrendingUp
 } from 'lucide-react';
+import ThreeDGallery from '@/components/ThreeDGallery';
 
 export default function HomePage() {
   const { data: session, status } = useSession();
@@ -93,9 +95,24 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-dark-900 dark:via-dark-800 dark:to-dark-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-dark-900 dark:via-dark-800 dark:to-dark-900 relative">
+   
+      {/* Background Image - شفاف */}
+     
+      {/* <div className="fixed inset-0 z-0 opacity-17 pointer-events-none">
+        <Image
+          src="/tah.png"
+          alt="Background"
+          fill
+          className="object-contain"
+          style={{ objectPosition: 'center' }}
+          unoptimized
+          priority
+        />
+      </div> */}
+
       {/* Hero Section */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden z-10">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{
@@ -123,23 +140,13 @@ export default function HomePage() {
               نظام متكامل وشامل لإدارة المخزون والأصناف بطريقة احترافية وسهلة
             </p>
 
-            {/* Creator Info */}
-            <div className="flex flex-col items-center gap-4 mb-12">
-              <div className="flex items-center gap-3 px-6 py-4 bg-white dark:bg-dark-800 rounded-2xl shadow-xl border-2 border-blue-200 dark:border-blue-800">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg">
-                  م
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">صمم بواسطة</p>
-                  <p className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                    محمد عبد الفتاح
-                  </p>
-                </div>
-              </div>
+            {/* 3D Gallery */}
+            <div className="flex justify-center items-center mb-40">
+              <ThreeDGallery />
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 ">
               {stats.map((stat, index) => {
                 const Icon = stat.icon;
                 return (
@@ -199,7 +206,7 @@ export default function HomePage() {
 
       {/* Features Section */}
       {isAuthenticated && (
-        <div className="container mx-auto px-4 py-12 md:py-20">
+        <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
           <div className="text-center mb-12" dir="rtl">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-200 mb-4">
               المميزات الرئيسية
@@ -239,14 +246,14 @@ export default function HomePage() {
       )}
 
       {/* Footer */}
-      <footer className="bg-white dark:bg-dark-800 border-t border-slate-200 dark:border-dark-700 mt-20">
+      <footer className="bg-white dark:bg-dark-800 border-t border-slate-200 dark:border-dark-700 mt-20 relative z-10">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center" dir="rtl">
             <p className="text-slate-600 dark:text-slate-400 mb-2">
               © {new Date().getFullYear()} نظام إدارة المخزون والمستودعات
             </p>
             <p className="text-slate-500 dark:text-slate-500 text-sm">
-              صمم وتطوير: <span className="font-semibold text-blue-600 dark:text-blue-400">محمد عبد الفتاح</span>
+              تصميم وتطوير: <span className="font-semibold text-blue-600 dark:text-blue-400">محمد عبد الفتاح</span>
             </p>
           </div>
         </div>

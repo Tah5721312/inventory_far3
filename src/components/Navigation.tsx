@@ -6,7 +6,6 @@ import { useSession, signOut } from 'next-auth/react';
 import { useState } from 'react';
 // import { Can } from '@/components/Can';
 // import { Actions, Subjects } from '@/lib/ability';
-import ThemeToggle from '@/components/ThemeToggle';
 
 
 
@@ -31,7 +30,7 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className='sticky top-0 z-50 bg-blue-600 dark:bg-dark-800 text-white dark:text-text-light shadow-lg border-b border-blue-700 dark:border-dark-700'>
+    <nav className='sticky top-0 z-50 bg-blue-600 text-white shadow-lg border-b border-blue-700'>
       <div className='container mx-auto px-4 relative'>
         <div className='flex justify-between items-center py-4'>
           <h1 className='text-lg md:text-xl font-bold'>
@@ -49,8 +48,8 @@ export default function Navigation() {
                     href={item.href}
                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                       pathname === item.href
-                        ? 'bg-blue-800 dark:bg-dark-700 text-white dark:text-text-light'
-                        : 'text-blue-100 dark:text-text-muted hover:bg-blue-700 dark:hover:bg-dark-600'
+                        ? 'bg-blue-800 text-white'
+                        : 'text-blue-100 hover:bg-blue-700'
                     }`}
                     onClick={() => setIsMobileOpen(false)}
                   >
@@ -64,8 +63,8 @@ export default function Navigation() {
                     href={'/login'}
                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                       pathname === '/login'
-                        ? 'bg-blue-800 dark:bg-dark-700 text-white dark:text-text-light'
-                        : 'text-blue-100 dark:text-text-muted hover:bg-blue-700 dark:hover:bg-dark-600'
+                        ? 'bg-blue-800 text-white'
+                        : 'text-blue-100 hover:bg-blue-700'
                     }`}
                     onClick={() => setIsMobileOpen(false)}
                   >
@@ -75,8 +74,8 @@ export default function Navigation() {
                     href={'/register'}
                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                       pathname === '/register'
-                        ? 'bg-blue-800 dark:bg-dark-700 text-white dark:text-text-light'
-                        : 'text-blue-100 dark:text-text-muted hover:bg-blue-700 dark:hover:bg-dark-600'
+                        ? 'bg-blue-800 text-white'
+                        : 'text-blue-100 hover:bg-blue-700'
                     }`}
                     onClick={() => setIsMobileOpen(false)}
                   >
@@ -91,8 +90,8 @@ export default function Navigation() {
                       href={`/profile/${userId}`}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                         pathname === `/profile/${userId}`
-                          ? 'bg-blue-800 dark:bg-dark-700 text-white dark:text-text-light'
-                          : 'text-blue-100 dark:text-text-muted hover:bg-blue-700 dark:hover:bg-dark-600'
+                          ? 'bg-blue-800 text-white'
+                          : 'text-blue-100 hover:bg-blue-700'
                       }`}
                       onClick={() => setIsMobileOpen(false)}
                     >
@@ -101,22 +100,13 @@ export default function Navigation() {
 
                   <button
                     onClick={() => signOut({ redirect: true, callbackUrl: '/login' })}
-                    className='px-3 py-2 rounded-md text-sm font-medium text-blue-100 dark:text-text-muted hover:bg-blue-700 dark:hover:bg-dark-600 transition-colors duration-200'
+                    className='px-3 py-2 rounded-md text-sm font-medium text-blue-100 hover:bg-blue-700 transition-colors duration-200'
                   >
                     تسجيل الخروج
                   </button>
                 </>
               )}
 
-              {/* Theme Toggle - Desktop */}
-              <div className="ml-2">
-                <ThemeToggle />
-              </div>
-            </div>
-
-            {/* Theme Toggle - Mobile (visible on small screens) */}
-            <div className="md:hidden">
-              <ThemeToggle />
             </div>
 
             {/* Mobile hamburger */}
@@ -147,7 +137,7 @@ export default function Navigation() {
 
         {/* Mobile menu panel (overlay) */}
         {isMobileOpen && (
-          <div className='md:hidden absolute left-0 right-0 top-full z-50 bg-blue-600/95 dark:bg-dark-800/95 backdrop-blur shadow-lg border-t border-blue-700 dark:border-dark-700'>
+          <div className='md:hidden absolute left-0 right-0 top-full z-50 bg-blue-600/95 backdrop-blur shadow-lg border-t border-blue-700'>
             <div className='flex flex-col space-y-2 px-4 pb-4 pt-2'>
               {/* إظهار عناصر القائمة فقط عند تسجيل الدخول */}
               {isAuthenticated && commonItems.map((item) => (
@@ -156,8 +146,8 @@ export default function Navigation() {
                     href={item.href}
                     className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
                       pathname === item.href
-                        ? 'bg-blue-800 dark:bg-dark-700 text-white dark:text-text-light'
-                        : 'text-blue-100 dark:text-text-muted hover:bg-blue-700 dark:hover:bg-dark-600'
+                        ? 'bg-blue-800 text-white'
+                        : 'text-blue-100 hover:bg-blue-700'
                     }`}
                     onClick={() => setIsMobileOpen(false)}
                   >
@@ -165,11 +155,6 @@ export default function Navigation() {
                   </Link>
               ))}
 
-              {/* Theme Toggle - Mobile Menu */}
-              {/* <div className="flex items-center justify-between px-3 py-2 border-t border-blue-700 dark:border-dark-700 mt-2 pt-3">
-                <span className="text-blue-100 dark:text-text-muted text-base font-medium">Theme</span>
-                <ThemeToggle />
-              </div> */}
 
               {!isAuthenticated && (
                 <>
@@ -177,8 +162,8 @@ export default function Navigation() {
                     href={'/login'}
                     className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
                       pathname === '/login'
-                        ? 'bg-blue-800 dark:bg-dark-700 text-white dark:text-text-light'
-                        : 'text-blue-100 dark:text-text-muted hover:bg-blue-700 dark:hover:bg-dark-600'
+                        ? 'bg-blue-800 text-white'
+                        : 'text-blue-100 hover:bg-blue-700'
                     }`}
                     onClick={() => setIsMobileOpen(false)}
                   >
@@ -188,8 +173,8 @@ export default function Navigation() {
                     href={'/register'}
                     className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
                       pathname === '/register'
-                        ? 'bg-blue-800 dark:bg-dark-700 text-white dark:text-text-light'
-                        : 'text-blue-100 dark:text-text-muted hover:bg-blue-700 dark:hover:bg-dark-600'
+                        ? 'bg-blue-800 text-white'
+                        : 'text-blue-100 hover:bg-blue-700'
                     }`}
                     onClick={() => setIsMobileOpen(false)}
                   >
@@ -204,8 +189,8 @@ export default function Navigation() {
                       href={`/profile/${userId}`}
                       className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
                         pathname === `/profile/${userId}`
-                          ? 'bg-blue-800 dark:bg-dark-700 text-white dark:text-text-light'
-                          : 'text-blue-100 dark:text-text-muted hover:bg-blue-700 dark:hover:bg-dark-600'
+                          ? 'bg-blue-800 text-white'
+                          : 'text-blue-100 hover:bg-blue-700'
                       }`}
                       onClick={() => setIsMobileOpen(false)}
                     >
@@ -217,7 +202,7 @@ export default function Navigation() {
                       setIsMobileOpen(false);
                       signOut({ redirect: true, callbackUrl: '/login' });
                     }}
-                    className='block text-left px-3 py-2 rounded-md text-base font-medium text-blue-100 dark:text-text-muted hover:bg-blue-700 dark:hover:bg-dark-600 transition-colors duration-200'
+                    className='block text-left px-3 py-2 rounded-md text-base font-medium text-blue-100 hover:bg-blue-700 transition-colors duration-200'
                   >
                     تسجيل الخروج
                   </button>
