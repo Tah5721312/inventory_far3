@@ -14,9 +14,17 @@ export async function GET(
         u.USER_ID,
         u.USERNAME,
         u.EMAIL,
+        u.PHONE,
+        u.IS_ACTIVE,
         COALESCE(u.FULL_NAME, u.USERNAME) as FULL_NAME,
         r.ROLE_ID,
         r.NAME as ROLE_NAME,
+        d.DEPT_ID,
+        d.DEPT_NAME,
+        k.RANK_ID,
+        k.RANK_NAME,
+        f.FLOOR_ID,
+        f.FLOOR_NAME,
         LISTAGG(
           CASE 
             WHEN rp.SUBJECT IS NOT NULL THEN 
@@ -26,9 +34,12 @@ export async function GET(
         ) WITHIN GROUP (ORDER BY rp.SUBJECT, rp.ACTION) as PERMISSIONS_STRING
       FROM far3.USERS u
       LEFT JOIN far3.ROLES r ON u.ROLE_ID = r.ROLE_ID
+      LEFT JOIN far3.DEPARTMENTS d ON u.DEPT_ID = d.DEPT_ID
+      LEFT JOIN far3.RANKS k ON u.RANK_ID = k.RANK_ID
+      LEFT JOIN far3.FLOORS f ON u.FLOOR_ID = f.FLOOR_ID
       LEFT JOIN far3.ROLE_PERMISSIONS rp ON r.ROLE_ID = rp.ROLE_ID
       WHERE u.USER_ID = :userId
-      GROUP BY u.USER_ID, u.USERNAME, u.EMAIL, u.FULL_NAME, r.ROLE_ID, r.NAME
+      GROUP BY u.USER_ID, u.USERNAME, u.EMAIL, u.PHONE, u.IS_ACTIVE, u.FULL_NAME, r.ROLE_ID, r.NAME, d.DEPT_ID, d.DEPT_NAME, k.RANK_ID, k.RANK_NAME, f.FLOOR_ID, f.FLOOR_NAME
     `;
 
     const result = await executeQuery<{
@@ -36,9 +47,17 @@ export async function GET(
       USERNAME: string;
       EMAIL: string;
       FULL_NAME: string;
-      ROLE_ID: number;
-      ROLE_NAME: string;
-      PERMISSIONS_STRING: string;
+      PHONE?: string;
+      IS_ACTIVE?: number;
+      ROLE_ID?: number;
+      ROLE_NAME?: string;
+      DEPT_ID?: number;
+      DEPT_NAME?: string;
+      RANK_ID?: number;
+      RANK_NAME?: string;
+      FLOOR_ID?: number;
+      FLOOR_NAME?: string;
+      PERMISSIONS_STRING?: string;
     }>(query, { userId });
 
     if (result.rows.length === 0) {
@@ -71,8 +90,16 @@ export async function GET(
       USERNAME: row.USERNAME,
       FULL_NAME: row.FULL_NAME,
       EMAIL: row.EMAIL,
-      ROLE_ID: row.ROLE_ID,
-      ROLE_NAME: row.ROLE_NAME,
+      PHONE: row.PHONE || undefined,
+      IS_ACTIVE: row.IS_ACTIVE || undefined,
+      ROLE_ID: row.ROLE_ID || undefined,
+      ROLE_NAME: row.ROLE_NAME || undefined,
+      DEPT_ID: row.DEPT_ID || undefined,
+      DEPT_NAME: row.DEPT_NAME || undefined,
+      RANK_ID: row.RANK_ID || undefined,
+      RANK_NAME: row.RANK_NAME || undefined,
+      FLOOR_ID: row.FLOOR_ID || undefined,
+      FLOOR_NAME: row.FLOOR_NAME || undefined,
       PERMISSIONS: permissions
     };
 
@@ -101,7 +128,7 @@ export async function PUT(
     const { id } = await params;
     const userId = parseInt(id);
     const body = await request.json();
-    const { username, email, fullName, roleId, newUserId } = body;
+    const { username, email, fullName, roleId, newUserId, phone, deptId, rankId, floorId, isActive } = body;
 
     // If the client requests changing the USER_ID, validate uniqueness first
     let effectiveUserId = userId;
@@ -129,22 +156,61 @@ export async function PUT(
       effectiveUserId = newUserId;
     }
 
+    // Build dynamic update query based on provided fields
+    const updateFields: string[] = [];
+    const updateParams: any = { effectiveUserId };
+
+    if (username !== undefined) {
+      updateFields.push('USERNAME = :username');
+      updateParams.username = username;
+    }
+    if (email !== undefined) {
+      updateFields.push('EMAIL = :email');
+      updateParams.email = email;
+    }
+    if (fullName !== undefined) {
+      updateFields.push('FULL_NAME = :fullName');
+      updateParams.fullName = fullName;
+    }
+    if (roleId !== undefined) {
+      updateFields.push('ROLE_ID = :roleId');
+      updateParams.roleId = roleId;
+    }
+    if (phone !== undefined) {
+      updateFields.push('PHONE = :phone');
+      updateParams.phone = phone || null;
+    }
+    if (deptId !== undefined) {
+      updateFields.push('DEPT_ID = :deptId');
+      updateParams.deptId = deptId || null;
+    }
+    if (rankId !== undefined) {
+      updateFields.push('RANK_ID = :rankId');
+      updateParams.rankId = rankId || null;
+    }
+    if (floorId !== undefined) {
+      updateFields.push('FLOOR_ID = :floorId');
+      updateParams.floorId = floorId || null;
+    }
+    if (isActive !== undefined) {
+      updateFields.push('IS_ACTIVE = :isActive');
+      updateParams.isActive = isActive;
+    }
+
+    if (updateFields.length === 0) {
+      return NextResponse.json(
+        { error: 'No fields to update' },
+        { status: 400 }
+      );
+    }
+
     const updateQuery = `
       UPDATE far3.USERS 
-      SET USERNAME = :username,
-          EMAIL = :email,
-          FULL_NAME = :fullName,
-          ROLE_ID = :roleId
+      SET ${updateFields.join(', ')}
       WHERE USER_ID = :effectiveUserId
     `;
 
-    await executeQuery(updateQuery, {
-      username,
-      email,
-      fullName,
-      roleId,
-      effectiveUserId
-    });
+    await executeQuery(updateQuery, updateParams);
 
 // when update user from nurse to super admin  
 //   i refresh page to refresh الصلاحيات shown in page
@@ -155,9 +221,17 @@ export async function PUT(
         u.USER_ID,
         u.USERNAME,
         u.EMAIL,
+        u.PHONE,
+        u.IS_ACTIVE,
         COALESCE(u.FULL_NAME, u.USERNAME) as FULL_NAME,
         r.ROLE_ID,
         r.NAME as ROLE_NAME,
+        d.DEPT_ID,
+        d.DEPT_NAME,
+        k.RANK_ID,
+        k.RANK_NAME,
+        f.FLOOR_ID,
+        f.FLOOR_NAME,
         LISTAGG(
           CASE 
             WHEN rp.SUBJECT IS NOT NULL THEN 
@@ -167,9 +241,12 @@ export async function PUT(
         ) WITHIN GROUP (ORDER BY rp.SUBJECT, rp.ACTION) as PERMISSIONS_STRING
       FROM far3.USERS u
       LEFT JOIN far3.ROLES r ON u.ROLE_ID = r.ROLE_ID
+      LEFT JOIN far3.DEPARTMENTS d ON u.DEPT_ID = d.DEPT_ID
+      LEFT JOIN far3.RANKS k ON u.RANK_ID = k.RANK_ID
+      LEFT JOIN far3.FLOORS f ON u.FLOOR_ID = f.FLOOR_ID
       LEFT JOIN far3.ROLE_PERMISSIONS rp ON r.ROLE_ID = rp.ROLE_ID
       WHERE u.USER_ID = :effectiveUserId
-      GROUP BY u.USER_ID, u.USERNAME, u.EMAIL, u.FULL_NAME, r.ROLE_ID, r.NAME
+      GROUP BY u.USER_ID, u.USERNAME, u.EMAIL, u.PHONE, u.IS_ACTIVE, u.FULL_NAME, r.ROLE_ID, r.NAME, d.DEPT_ID, d.DEPT_NAME, k.RANK_ID, k.RANK_NAME, f.FLOOR_ID, f.FLOOR_NAME
     `;
 
     const result = await executeQuery<{
@@ -177,9 +254,17 @@ export async function PUT(
       USERNAME: string;
       EMAIL: string;
       FULL_NAME: string;
-      ROLE_ID: number;
-      ROLE_NAME: string;
-      PERMISSIONS_STRING: string;
+      PHONE?: string;
+      IS_ACTIVE?: number;
+      ROLE_ID?: number;
+      ROLE_NAME?: string;
+      DEPT_ID?: number;
+      DEPT_NAME?: string;
+      RANK_ID?: number;
+      RANK_NAME?: string;
+      FLOOR_ID?: number;
+      FLOOR_NAME?: string;
+      PERMISSIONS_STRING?: string;
     }>(fetchQuery, { effectiveUserId });
 
     if (result.rows.length === 0) {
@@ -212,8 +297,16 @@ export async function PUT(
       USERNAME: row.USERNAME,
       FULL_NAME: row.FULL_NAME,
       EMAIL: row.EMAIL,
-      ROLE_ID: row.ROLE_ID,
-      ROLE_NAME: row.ROLE_NAME,
+      PHONE: row.PHONE || undefined,
+      IS_ACTIVE: row.IS_ACTIVE || undefined,
+      ROLE_ID: row.ROLE_ID || undefined,
+      ROLE_NAME: row.ROLE_NAME || undefined,
+      DEPT_ID: row.DEPT_ID || undefined,
+      DEPT_NAME: row.DEPT_NAME || undefined,
+      RANK_ID: row.RANK_ID || undefined,
+      RANK_NAME: row.RANK_NAME || undefined,
+      FLOOR_ID: row.FLOOR_ID || undefined,
+      FLOOR_NAME: row.FLOOR_NAME || undefined,
       PERMISSIONS: permissions
     };
 
