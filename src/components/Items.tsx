@@ -543,8 +543,23 @@ export default function ItemsPage() {
                   <tbody className="divide-y divide-slate-100">
                     {filteredItems.map((item) => (
                       <tr key={item.ITEM_ID} className="hover:bg-blue-50/50 transition-colors duration-150 group">
-                        <td className="px-4 xl:px-6 py-4">
-                          <div className="text-sm font-semibold text-slate-900">{item.ITEM_NAME}</div>
+                        <td className="px-4 xl:px-6 py-4" style={{ maxWidth: '250px', width: '250px' }}>
+                          <div 
+                            className="text-sm font-semibold text-slate-900 break-words" 
+                            title={item.ITEM_NAME}
+                            style={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              wordBreak: 'break-word',
+                              lineHeight: '1.4',
+                              maxHeight: '2.8em'
+                            }}
+                          >
+                            {item.ITEM_NAME}
+                          </div>
                         </td>
                         <td className="px-4 xl:px-6 py-4">
                           <div className="flex flex-col gap-1.5">
@@ -646,8 +661,21 @@ export default function ItemsPage() {
               {filteredItems.map((item) => (
                 <div key={item.ITEM_ID} className="bg-white rounded-2xl shadow-lg border border-slate-200/50 p-5 hover:shadow-xl transition-all duration-200">
                   <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-slate-900 mb-1">{item.ITEM_NAME}</h3>
+                    <div className="flex-1 min-w-0">
+                      <h3 
+                        className="text-base font-bold text-slate-900 mb-1 line-clamp-2 break-words" 
+                        title={item.ITEM_NAME}
+                        style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          wordBreak: 'break-word'
+                        }}
+                      >
+                        {item.ITEM_NAME}
+                      </h3>
                       {item.ITEM_TYPE_NAME && (
                         <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700">
                           {item.ITEM_TYPE_NAME}

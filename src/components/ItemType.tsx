@@ -1,7 +1,7 @@
 // app/item-types/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Pencil, Trash2, Plus, X, Search, Loader2, CheckCircle, AlertCircle, Package, FolderTree } from 'lucide-react';
 
 interface SubCategory {
@@ -27,6 +27,7 @@ export default function ItemTypesPage() {
   const [formData, setFormData] = useState({ ITEM_TYPE_NAME: '', SUB_CAT_ID: '' });
   const [submitting, setSubmitting] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const itemTypeNameInputRef = useRef<HTMLInputElement>(null);
 
   // جلب البيانات
   useEffect(() => {
@@ -75,6 +76,17 @@ export default function ItemTypesPage() {
     }
     setNotification(null);
     setIsModalOpen(true);
+    // Focus input after modal opens
+    setTimeout(() => {
+      if (itemTypeNameInputRef.current) {
+        itemTypeNameInputRef.current.focus();
+        // For RTL, place cursor at the end (left side visually)
+        if (itemTypeNameInputRef.current.value) {
+          const length = itemTypeNameInputRef.current.value.length;
+          itemTypeNameInputRef.current.setSelectionRange(length, length);
+        }
+      }
+    }, 150);
   };
 
   const handleCloseModal = () => {
@@ -215,41 +227,54 @@ export default function ItemTypesPage() {
             {filteredItemTypes.map((itemType) => (
               <div
                 key={itemType.ITEM_TYPE_ID}
-                className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-transparent hover:border-purple-200"
+                className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-transparent hover:border-purple-200 flex flex-col min-h-0"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-slate-800 mb-2 text-right">
+                  <div className="flex-1 min-w-0">
+                    <h3 
+                      className="text-lg font-bold text-slate-800 mb-2 text-right break-words line-clamp-2"
+                      title={itemType.ITEM_TYPE_NAME}
+                      style={{
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        hyphens: 'auto',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
                       {itemType.ITEM_TYPE_NAME}
                     </h3>
                     <div className="space-y-1">
                       <p className="text-sm text-slate-500 text-right">
                         رقم النوع: {itemType.ITEM_TYPE_ID}
                       </p>
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-3 py-1 rounded-lg text-sm font-medium">
-                          <FolderTree className="w-4 h-4" />
-                          {itemType.SUB_CAT_NAME || 'غير محدد'}
+                      <div className="flex items-center justify-end gap-2 flex-wrap">
+                        <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-3 py-1 rounded-lg text-sm font-medium break-words max-w-full">
+                          <FolderTree className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">{itemType.SUB_CAT_NAME || 'غير محدد'}</span>
                         </span>
                       </div>
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex gap-2 pt-4 border-t border-slate-100">
+                <div className="flex gap-2 pt-4 mt-auto border-t border-slate-100">
                   <button
                     onClick={() => handleOpenModal(itemType)}
                     className="flex-1 flex items-center justify-center gap-2 bg-purple-50 text-purple-600 px-4 py-2.5 rounded-lg font-medium hover:bg-purple-100 transition-colors"
                   >
-                    <Pencil className="w-4 h-4" />
-                    تعديل
+                    <Pencil className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">تعديل</span>
                   </button>
                   <button
                     onClick={() => handleDelete(itemType.ITEM_TYPE_ID)}
                     className="flex-1 flex items-center justify-center gap-2 bg-red-50 text-red-600 px-4 py-2.5 rounded-lg font-medium hover:bg-red-100 transition-colors"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    حذف
+                    <Trash2 className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">حذف</span>
                   </button>
                 </div>
               </div>
@@ -260,77 +285,117 @@ export default function ItemTypesPage() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-40 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all scale-100 animate-in zoom-in duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-800">
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 p-4 overflow-y-auto"
+          onClick={handleCloseModal}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg md:max-w-2xl transform transition-all scale-100 my-auto flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxHeight: '90vh' }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-200 bg-gradient-to-r from-purple-50 to-pink-50 rounded-t-2xl flex-shrink-0">
+              <h2 className="text-lg md:text-xl font-bold text-slate-800 pr-2 flex-1 text-right">
                 {editingItemType ? 'تعديل نوع الصنف' : 'إضافة نوع صنف جديد'}
               </h2>
               <button
                 onClick={handleCloseModal}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-white rounded-lg flex-shrink-0"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-4 md:p-6 space-y-4 overflow-y-auto flex-1" style={{ minHeight: 0 }}>
               {notification && notification.type === 'error' && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-600 text-right">{notification.message}</p>
+                <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                    <p className="text-sm text-red-600 text-right">{notification.message}</p>
+                  </div>
                 </div>
               )}
+              
+              {/* اسم نوع الصنف */}
               <div>
-                <label className="block text-slate-700 font-semibold mb-3 text-right">
-                  اسم نوع الصنف
+                <label className="block text-slate-700 font-semibold mb-2 text-right text-sm">
+                  اسم نوع الصنف <span className="text-red-500">*</span>
                 </label>
                 <input
+                  ref={itemTypeNameInputRef}
                   type="text"
                   value={formData.ITEM_TYPE_NAME}
                   onChange={(e) => {
-                    setFormData({ ...formData, ITEM_TYPE_NAME: e.target.value });
+                    const newValue = e.target.value;
+                    setFormData({ ...formData, ITEM_TYPE_NAME: newValue });
                     if (notification) setNotification(null);
                   }}
-                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors text-right ${
-                    notification && notification.type === 'error' ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-purple-500'
+                  onFocus={(e) => {
+                    // Move cursor to end of text when focusing (for RTL)
+                    const input = e.target as HTMLInputElement;
+                    if (input && input.value) {
+                      setTimeout(() => {
+                        input.setSelectionRange(input.value.length, input.value.length);
+                      }, 0);
+                    }
+                  }}
+                  className={`w-full px-4 py-2.5 text-base rounded-lg border-2 focus:outline-none transition-all text-right ${
+                    notification && notification.type === 'error' 
+                      ? 'border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-200' 
+                      : 'border-slate-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-200'
                   }`}
                   placeholder="أدخل اسم نوع الصنف"
+                  autoComplete="off"
+                  dir="rtl"
                 />
               </div>
 
+              {/* التصنيف الفرعي */}
               <div>
-                <label className="block text-slate-700 font-semibold mb-3 text-right">
-                  التصنيف الفرعي
+                <label className="block text-slate-700 font-semibold mb-2 text-right text-sm">
+                  التصنيف الفرعي <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={formData.SUB_CAT_ID}
-                  onChange={(e) => setFormData({ ...formData, SUB_CAT_ID: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:outline-none transition-colors text-right"
-                >
-                  <option value="">اختر التصنيف الفرعي</option>
-                  {subCategories.map((subCat) => (
-                    <option key={subCat.SUB_CAT_ID} value={subCat.SUB_CAT_ID}>
-                      {subCat.SUB_CAT_NAME}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative w-full">
+                  <select
+                    value={formData.SUB_CAT_ID}
+                    onChange={(e) => setFormData({ ...formData, SUB_CAT_ID: e.target.value })}
+                    className="w-full px-4 py-2.5 text-sm rounded-lg border-2 border-slate-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-200 transition-all text-right appearance-none bg-white cursor-pointer"
+                    style={{ 
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23334155' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 0.75rem center',
+                      paddingRight: '2.5rem',
+                      direction: 'rtl'
+                    }}
+                  >
+                    <option value="">اختر التصنيف الفرعي</option>
+                    {subCategories.map((subCat) => (
+                      <option key={subCat.SUB_CAT_ID} value={subCat.SUB_CAT_ID} title={subCat.SUB_CAT_NAME}>
+                        {subCat.SUB_CAT_NAME}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              {/* Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-slate-200 flex-shrink-0">
                 <button
                   onClick={handleCloseModal}
-                  className="flex-1 px-6 py-3 rounded-xl border-2 border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-lg border-2 border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all text-sm"
                 >
                   إلغاء
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || !formData.ITEM_TYPE_NAME.trim() || !formData.SUB_CAT_ID}
-                  className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                 >
                   {submitting ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       جاري الحفظ...
                     </>
                   ) : (
