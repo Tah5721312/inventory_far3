@@ -382,18 +382,23 @@ export default function ItemsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8" dir="rtl">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-800 mb-2">إدارة الأصناف</h1>
-              <p className="text-slate-600">عرض وإدارة جميع الأصناف والأجهزة</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 p-3 sm:p-4 md:p-6 lg:p-8" dir="rtl">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header - Modern */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl sm:rounded-3xl shadow-xl p-5 sm:p-6 lg:p-8 text-white">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <Plus size={24} className="text-white" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">إدارة الأصناف</h1>
+              </div>
+              <p className="text-blue-100 text-sm sm:text-base ml-14 sm:ml-0">عرض وإدارة جميع الأصناف والأجهزة في النظام</p>
             </div>
             <button
               onClick={() => openModal()}
-              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg"
+              className="flex items-center justify-center gap-2 bg-white text-blue-600 px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 whitespace-nowrap"
             >
               <Plus size={20} />
               <span>إضافة صنف جديد</span>
@@ -401,427 +406,706 @@ export default function ItemsPage() {
           </div>
         </div>
 
-        {/* Search & Filters */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
+        {/* Search & Filters - Modern */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200/50 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none" size={20} />
               <input
                 type="text"
-                placeholder="البحث عن صنف، رقم سيريال، أو مستخدم..."
+                placeholder="🔍 ابحث عن صنف، رقم سيريال، أو مستخدم..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pr-12 pl-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                className="w-full pr-12 pl-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white text-sm sm:text-base"
               />
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-6 py-3 border border-slate-300 rounded-lg hover:bg-slate-50 transition-all"
+              className={`flex items-center justify-center gap-2 px-5 sm:px-6 py-3.5 border-2 rounded-xl font-semibold transition-all duration-200 ${
+                showFilters
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-lg'
+                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 hover:border-slate-400'
+              }`}
             >
-              <Filter size={20} />
-              <span>فلاتر</span>
+              <Filter size={18} />
+              <span className="whitespace-nowrap">فلاتر</span>
+              {showFilters && <span className="ml-1 text-xs">✓</span>}
             </button>
           </div>
 
           {showFilters && (
-            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <input
-                type="number"
-                placeholder="معرف التصنيف الفرعي"
-                value={filters.subCatId}
-                onChange={(e) => setFilters({ ...filters, subCatId: e.target.value })}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input
-                type="number"
-                placeholder="معرف القسم"
-                value={filters.deptId}
-                onChange={(e) => setFilters({ ...filters, deptId: e.target.value })}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input
-                type="text"
-                placeholder="رقم السيريال"
-                value={filters.serial}
-                onChange={(e) => setFilters({ ...filters, serial: e.target.value })}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <button
-                onClick={fetchItems}
-                className="md:col-span-3 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all"
-              >
-                تطبيق الفلاتر
-              </button>
+            <div className="mt-5 pt-5 border-t-2 border-slate-100 space-y-4 animate-in slide-in-from-top duration-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-2">التصنيف الفرعي</label>
+                  <input
+                    type="number"
+                    placeholder="معرف التصنيف الفرعي"
+                    value={filters.subCatId}
+                    onChange={(e) => setFilters({ ...filters, subCatId: e.target.value })}
+                    className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all bg-slate-50 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-2">القسم</label>
+                  <input
+                    type="number"
+                    placeholder="معرف القسم"
+                    value={filters.deptId}
+                    onChange={(e) => setFilters({ ...filters, deptId: e.target.value })}
+                    className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all bg-slate-50 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-2">رقم السيريال</label>
+                  <input
+                    type="text"
+                    placeholder="رقم السيريال"
+                    value={filters.serial}
+                    onChange={(e) => setFilters({ ...filters, serial: e.target.value })}
+                    className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all bg-slate-50 focus:bg-white"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+                <button
+                  onClick={() => {
+                    setFilters({ subCatId: '', deptId: '', serial: '' });
+                    fetchItems();
+                  }}
+                  className="px-5 py-2.5 border-2 border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-all font-medium"
+                >
+                  مسح الفلاتر
+                </button>
+                <button
+                  onClick={fetchItems}
+                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold shadow-md hover:shadow-lg"
+                >
+                  تطبيق الفلاتر
+                </button>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Items Count */}
-        <div className="mb-4 text-slate-600">
-          عدد الأصناف: <span className="font-bold text-slate-800">{filteredItems.length}</span>
-        </div>
-
-        {/* Table */}
-        {loading ? (
-          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-slate-600">جاري تحميل البيانات...</p>
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-            <p className="text-slate-600 text-lg">لا توجد أصناف</p>
-            <p className="text-slate-500 text-sm mt-2">جرب إضافة صنف جديد أو تعديل الفلاتر</p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b-2 border-slate-200">
-                  <tr>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-slate-700">اسم الصنف</th>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-slate-700">النوع</th>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-slate-700">السيريال</th>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-slate-700">المستخدم</th>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-slate-700">القسم</th>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-slate-700">الطابق</th>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-slate-700">الحالة</th>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-slate-700">IP</th>
-                    <th className="px-6 py-4 text-center text-sm font-bold text-slate-700">الإجراءات</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {filteredItems.map((item) => (
-                    <tr key={item.ITEM_ID} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 text-sm text-slate-800 font-medium">{item.ITEM_NAME}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{item.ITEM_TYPE_NAME || '-'}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{item.SERIAL || '-'}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {item.ASSIGNED_USER || (item.USER_ID === null || item.USER_ID === undefined ? 'المخزن' : '-')}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{item.DEPT_NAME || '-'}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{item.FLOOR_NAME || '-'}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{item.SITUATION || '-'}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{item.IP || '-'}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => openModal(item)}
-                            className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-all"
-                            title="تعديل"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.ITEM_ID)}
-                            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all"
-                            title="حذف"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Stats & Items Count - Modern */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200/50 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <div className="text-2xl sm:text-3xl font-bold text-blue-600">{filteredItems.length}</div>
+                <div className="text-xs sm:text-sm text-slate-600 mt-1">عدد الأصناف</div>
+              </div>
+              <div className="hidden sm:block h-12 w-px bg-slate-200"></div>
+              <div className="text-sm text-slate-600">
+                {searchTerm && (
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg">
+                    <Search size={14} />
+                    نتائج البحث: {filteredItems.length}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* Items Display - Modern & Responsive */}
+        {loading ? (
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200/50 p-12 sm:p-16 text-center">
+            <div className="animate-spin rounded-full h-16 w-16 sm:h-20 sm:w-20 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+            <p className="text-slate-600 text-lg font-medium">جاري تحميل البيانات...</p>
+            <p className="text-slate-400 text-sm mt-2">يرجى الانتظار</p>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200/50 p-12 sm:p-16 text-center">
+            <div className="w-20 h-20 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+              <Search size={32} className="text-slate-400" />
+            </div>
+            <p className="text-slate-700 text-xl font-semibold mb-2">لا توجد أصناف</p>
+            <p className="text-slate-500 text-sm mb-6">جرب إضافة صنف جديد أو تعديل الفلاتر</p>
+            <button
+              onClick={() => openModal()}
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all font-semibold shadow-md hover:shadow-lg"
+            >
+              <Plus size={20} />
+              إضافة صنف جديد
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden lg:block bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200/50 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-slate-50 to-slate-100 border-b-2 border-slate-200">
+                    <tr>
+                      <th className="px-4 xl:px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">اسم الصنف</th>
+                      <th className="px-4 xl:px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">النوع</th>
+                      <th className="px-4 xl:px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">السيريال</th>
+                      <th className="px-4 xl:px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">المستخدم</th>
+                      <th className="px-4 xl:px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">القسم</th>
+                      <th className="px-4 xl:px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">الطابق</th>
+                      <th className="px-4 xl:px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">الحالة</th>
+                      <th className="px-4 xl:px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">رقم القفل</th>
+                      <th className="px-4 xl:px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">IP</th>
+                      <th className="px-4 xl:px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredItems.map((item) => (
+                      <tr key={item.ITEM_ID} className="hover:bg-blue-50/50 transition-colors duration-150 group">
+                        <td className="px-4 xl:px-6 py-4">
+                          <div className="text-sm font-semibold text-slate-900">{item.ITEM_NAME}</div>
+                        </td>
+                        <td className="px-4 xl:px-6 py-4">
+                          <div className="flex flex-col gap-1.5">
+                            {item.ITEM_TYPE_NAME && (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 w-fit">
+                                {item.ITEM_TYPE_NAME}
+                              </span>
+                            )}
+                            {item.KIND && (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 w-fit">
+                                {item.KIND}
+                              </span>
+                            )}
+                            {!item.ITEM_TYPE_NAME && !item.KIND && (
+                              <span className="text-slate-400 text-sm">-</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 xl:px-6 py-4 text-sm text-slate-600 font-mono">
+                          {item.SERIAL || <span className="text-slate-400">-</span>}
+                        </td>
+                        <td className="px-4 xl:px-6 py-4">
+                          {item.ASSIGNED_USER ? (
+                            <span className="inline-flex items-center gap-1.5 text-sm text-slate-700">
+                              <span>👤</span>
+                              {item.ASSIGNED_USER}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600">
+                              <span>📦</span>
+                              المخزن
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 xl:px-6 py-4 text-sm text-slate-600">
+                          {item.DEPT_NAME || <span className="text-slate-400">-</span>}
+                        </td>
+                        <td className="px-4 xl:px-6 py-4 text-sm text-slate-600">
+                          {item.FLOOR_NAME || <span className="text-slate-400">-</span>}
+                        </td>
+                      <td className="px-4 xl:px-6 py-4">
+                        {item.SITUATION ? (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                              item.SITUATION === 'صالح' ? 'bg-green-100 text-green-700 border border-green-200' :
+                              item.SITUATION === 'عاطل' ? 'bg-red-100 text-red-700 border border-red-200' :
+                              item.SITUATION === 'تحت الإصلاح' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                              item.SITUATION === 'ورشة' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                              'bg-slate-100 text-slate-700 border border-slate-200'
+                            }`}>
+                              {item.SITUATION === 'صالح' && '🟢'}
+                              {item.SITUATION === 'عاطل' && '🔴'}
+                              {item.SITUATION === 'تحت الإصلاح' && '🟡'}
+                              {item.SITUATION === 'ورشة' && '🔧'}
+                              {item.SITUATION}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-sm">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 xl:px-6 py-4 text-sm text-slate-600">
+                          {item.LOCK_NUM ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                              🔒 {item.LOCK_NUM}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 xl:px-6 py-4 text-sm text-slate-600 font-mono">
+                          {item.IP || <span className="text-slate-400">-</span>}
+                        </td>
+                        <td className="px-4 xl:px-6 py-4">
+                          <div className="flex justify-center gap-2">
+                            <button
+                              onClick={() => openModal(item)}
+                              className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 hover:scale-110 transition-all duration-200 shadow-sm hover:shadow-md"
+                              title="تعديل"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item.ITEM_ID)}
+                              className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 hover:scale-110 transition-all duration-200 shadow-sm hover:shadow-md"
+                              title="حذف"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile/Tablet Card View */}
+            <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {filteredItems.map((item) => (
+                <div key={item.ITEM_ID} className="bg-white rounded-2xl shadow-lg border border-slate-200/50 p-5 hover:shadow-xl transition-all duration-200">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-slate-900 mb-1">{item.ITEM_NAME}</h3>
+                      {item.ITEM_TYPE_NAME && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700">
+                          {item.ITEM_TYPE_NAME}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openModal(item)}
+                        className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-all"
+                        title="تعديل"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.ITEM_ID)}
+                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all"
+                        title="حذف"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2.5">
+                    {item.SERIAL && (
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <span className="font-medium w-20">السيريال:</span>
+                        <span className="font-mono text-slate-900">{item.SERIAL}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium text-slate-600 w-20">المستخدم:</span>
+                      {item.ASSIGNED_USER ? (
+                        <span className="inline-flex items-center gap-1 text-slate-900">
+                          <span>👤</span>
+                          {item.ASSIGNED_USER}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600">
+                          <span>📦</span>
+                          المخزن
+                        </span>
+                      )}
+                    </div>
+                    {item.DEPT_NAME && (
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <span className="font-medium w-20">القسم:</span>
+                        <span>{item.DEPT_NAME}</span>
+                      </div>
+                    )}
+                    {item.FLOOR_NAME && (
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <span className="font-medium w-20">الطابق:</span>
+                        <span>{item.FLOOR_NAME}</span>
+                      </div>
+                    )}
+                    {item.SITUATION && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-medium text-slate-600 w-20">الحالة:</span>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                          item.SITUATION === 'صالح' ? 'bg-green-100 text-green-700 border border-green-200' :
+                          item.SITUATION === 'عاطل' ? 'bg-red-100 text-red-700 border border-red-200' :
+                          item.SITUATION === 'تحت الإصلاح' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                          item.SITUATION === 'ورشة' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                          'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}>
+                          {item.SITUATION === 'صالح' && '🟢'}
+                          {item.SITUATION === 'عاطل' && '🔴'}
+                          {item.SITUATION === 'تحت الإصلاح' && '🟡'}
+                          {item.SITUATION === 'ورشة' && '🔧'}
+                          {item.SITUATION}
+                        </span>
+                      </div>
+                    )}
+                    {item.KIND && (
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <span className="font-medium w-20">النوع:</span>
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          {item.KIND}
+                        </span>
+                      </div>
+                    )}
+                    {item.LOCK_NUM && (
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <span className="font-medium w-20">رقم القفل:</span>
+                        <span className="font-semibold text-slate-900">🔒 {item.LOCK_NUM}</span>
+                      </div>
+                    )}
+                    {item.IP && (
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <span className="font-medium w-20">IP:</span>
+                        <span className="font-mono text-slate-900">{item.IP}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
-        {/* Modal - نفس الكود السابق */}
+        {/* Modal - Modern & Responsive */}
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-slate-800">
-                  {editingItem ? 'تعديل الصنف' : 'إضافة صنف جديد'}
-                </h2>
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 md:p-6 z-50 transition-opacity duration-300"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowModal(false);
+              }
+            }}
+          >
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col transform transition-all duration-300 scale-100">
+              {/* Header with Gradient */}
+              <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center shadow-lg z-10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <Save size={20} className="text-white" />
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold">
+                    {editingItem ? 'تعديل الصنف' : 'إضافة صنف جديد'}
+                  </h2>
+                </div>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="p-2 hover:bg-slate-100 rounded-lg transition-all"
+                  className="p-2 hover:bg-white/20 rounded-lg transition-all duration-200 hover:rotate-90"
+                  aria-label="إغلاق"
                 >
-                  <X size={24} />
+                  <X size={22} className="text-white" />
                 </button>
               </div>
 
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      اسم الصنف *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.ITEM_NAME || ''}
-                      onChange={(e) => setFormData({ ...formData, ITEM_NAME: e.target.value })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-4 sm:p-6 lg:p-8">
+                  {/* Basic Information Section */}
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4 pb-2 border-b-2 border-blue-100">
+                      المعلومات الأساسية
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
+                      <div className="md:col-span-2">
+                        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2.5">
+                          <span className="text-red-500">*</span>
+                          اسم الصنف
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.ITEM_NAME || ''}
+                          onChange={(e) => setFormData({ ...formData, ITEM_NAME: e.target.value })}
+                          className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white"
+                          placeholder="أدخل اسم الصنف"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          التصنيف الرئيسي
+                        </label>
+                        <select
+                          value={formData.CAT_ID || ''}
+                          onChange={(e) => {
+                            setFormData({ 
+                              ...formData, 
+                              CAT_ID: Number(e.target.value),
+                              SUB_CAT_ID: undefined,
+                              ITEM_TYPE_ID: undefined
+                            });
+                          }}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white cursor-pointer"
+                        >
+                          <option value="">اختر التصنيف الرئيسي</option>
+                          {categories.map(cat => (
+                            <option key={cat.CAT_ID} value={cat.CAT_ID}>
+                              {cat.CAT_NAME}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2.5">
+                          <span className="text-red-500">*</span>
+                          التصنيف الفرعي
+                        </label>
+                        <select
+                          value={formData.SUB_CAT_ID || ''}
+                          onChange={(e) => setFormData({ ...formData, SUB_CAT_ID: Number(e.target.value), ITEM_TYPE_ID: undefined })}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white cursor-pointer disabled:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={!formData.CAT_ID}
+                        >
+                          <option value="">اختر التصنيف الفرعي</option>
+                          {filteredSubCategories.map(sub => (
+                            <option key={sub.SUB_CAT_ID} value={sub.SUB_CAT_ID}>
+                              {sub.SUB_CAT_NAME}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          نوع الصنف
+                        </label>
+                        <select
+                          value={formData.ITEM_TYPE_ID || ''}
+                          onChange={(e) => setFormData({ ...formData, ITEM_TYPE_ID: Number(e.target.value) })}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white cursor-pointer"
+                        >
+                          <option value="">اختر نوع الصنف</option>
+                          {filteredItemTypes.map(type => (
+                            <option key={type.ITEM_TYPE_ID} value={type.ITEM_TYPE_ID}>
+                              {type.ITEM_TYPE_NAME}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      التصنيف الرئيسي
-                    </label>
-                    <select
-                      value={formData.CAT_ID || ''}
-                      onChange={(e) => {
-                        setFormData({ 
-                          ...formData, 
-                          CAT_ID: Number(e.target.value),
-                          SUB_CAT_ID: undefined,
-                          ITEM_TYPE_ID: undefined
-                        });
-                      }}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                    >
-                      <option value="">اختر التصنيف الرئيسي</option>
-                      {categories.map(cat => (
-                        <option key={cat.CAT_ID} value={cat.CAT_ID}>
-                          {cat.CAT_NAME}
-                        </option>
-                      ))}
-                    </select>
+                  {/* Assignment Section */}
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4 pb-2 border-b-2 border-blue-100">
+                      التخصيص والموقع
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          المستخدم
+                        </label>
+                        <select
+                          value={formData.USER_ID !== undefined && formData.USER_ID !== null ? formData.USER_ID : 'warehouse'}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === 'warehouse') {
+                              setFormData({ ...formData, USER_ID: undefined });
+                            } else if (value === '') {
+                              setFormData({ ...formData, USER_ID: undefined });
+                            } else {
+                              setFormData({ ...formData, USER_ID: Number(value) });
+                            }
+                          }}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white cursor-pointer"
+                        >
+                          <option value="warehouse">📦 المخزن (لا يوجد مستخدم)</option>
+                          {users.map(user => (
+                            <option key={user.USER_ID} value={user.USER_ID}>
+                              👤 {user.USER_NAME}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          القسم {departments.length > 0 && <span className="text-slate-500 text-xs">({departments.length})</span>}
+                        </label>
+                        <select
+                          value={formData.DEPT_ID || ''}
+                          onChange={(e) => setFormData({ ...formData, DEPT_ID: Number(e.target.value) })}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white cursor-pointer"
+                        >
+                          <option value="">اختر القسم</option>
+                          {departments.length === 0 ? (
+                            <option value="" disabled>لا توجد أقسام</option>
+                          ) : (
+                            departments.map(dept => (
+                              <option key={dept.DEPT_ID} value={dept.DEPT_ID}>
+                                {dept.DEPT_NAME}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          الطابق {floors.length > 0 && <span className="text-slate-500 text-xs">({floors.length})</span>}
+                        </label>
+                        <select
+                          value={formData.FLOOR_ID || ''}
+                          onChange={(e) => setFormData({ ...formData, FLOOR_ID: Number(e.target.value) })}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white cursor-pointer"
+                        >
+                          <option value="">اختر الطابق</option>
+                          {floors.length === 0 ? (
+                            <option value="" disabled>لا توجد طوابق</option>
+                          ) : (
+                            floors.map(floor => (
+                              <option key={floor.FLOOR_ID} value={floor.FLOOR_ID}>
+                                {floor.FLOOR_NAME}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          رقم القفل
+                        </label>
+                        <input
+                          type="number"
+                          value={formData.LOCK_NUM || ''}
+                          onChange={(e) => setFormData({ ...formData, LOCK_NUM: e.target.value ? Number(e.target.value) : undefined })}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white"
+                          placeholder="أدخل رقم القفل"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      التصنيف الفرعي *
-                    </label>
-                    <select
-                      value={formData.SUB_CAT_ID || ''}
-                      onChange={(e) => setFormData({ ...formData, SUB_CAT_ID: Number(e.target.value), ITEM_TYPE_ID: undefined })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100"
-                      disabled={!formData.CAT_ID}
-                    >
-                      <option value="">اختر التصنيف الفرعي</option>
-                      {filteredSubCategories.map(sub => (
-                        <option key={sub.SUB_CAT_ID} value={sub.SUB_CAT_ID}>
-                          {sub.SUB_CAT_NAME}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Details Section */}
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4 pb-2 border-b-2 border-blue-100">
+                      التفاصيل والمعلومات
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          رقم السيريال
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.SERIAL || ''}
+                          onChange={(e) => setFormData({ ...formData, SERIAL: e.target.value })}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white"
+                          placeholder="أدخل رقم السيريال"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      نوع الصنف
-                    </label>
-                    <select
-                      value={formData.ITEM_TYPE_ID || ''}
-                      onChange={(e) => setFormData({ ...formData, ITEM_TYPE_ID: Number(e.target.value) })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                    >
-                      <option value="">اختر نوع الصنف</option>
-                      {filteredItemTypes.map(type => (
-                        <option key={type.ITEM_TYPE_ID} value={type.ITEM_TYPE_ID}>
-                          {type.ITEM_TYPE_NAME}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          النوع
+                        </label>
+                        <select
+                          value={formData.KIND || ''}
+                          onChange={(e) => setFormData({ ...formData, KIND: e.target.value })}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white cursor-pointer"
+                        >
+                          <option value="">اختر النوع</option>
+                          <option value="عهدة">عهدة</option>
+                          <option value="مشتريات">مشتريات</option>
+                        </select>
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      المستخدم
-                    </label>
-                    <select
-                      value={formData.USER_ID !== undefined && formData.USER_ID !== null ? formData.USER_ID : 'warehouse'}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === 'warehouse') {
-                          setFormData({ ...formData, USER_ID: undefined });
-                        } else if (value === '') {
-                          setFormData({ ...formData, USER_ID: undefined });
-                        } else {
-                          setFormData({ ...formData, USER_ID: Number(value) });
-                        }
-                      }}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                    >
-                      <option value="warehouse">المخزن (لا يوجد مستخدم)</option>
-                      {/* <option value="">اختر المستخدم</option> */}
-                      {users.map(user => (
-                        <option key={user.USER_ID} value={user.USER_ID}>
-                          {user.USER_NAME}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          الحالة
+                        </label>
+                        <select
+                          value={formData.SITUATION || ''}
+                          onChange={(e) => setFormData({ ...formData, SITUATION: e.target.value })}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white cursor-pointer"
+                        >
+                          <option value="">اختر الحالة</option>
+                          <option value="عاطل">🔴 عاطل</option>
+                          <option value="تحت الإصلاح">🟡 تحت الإصلاح</option>
+                          <option value="صالح">🟢 صالح</option>
+                          <option value="ورشة">🔧 ورشة</option>
+                        </select>
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      القسم {departments.length > 0 && `(${departments.length})`}
-                    </label>
-                    <select
-                      value={formData.DEPT_ID || ''}
-                      onChange={(e) => setFormData({ ...formData, DEPT_ID: Number(e.target.value) })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                    >
-                      <option value="">اختر القسم</option>
-                      {departments.length === 0 ? (
-                        <option value="" disabled>لا توجد أقسام</option>
-                      ) : (
-                        departments.map(dept => (
-                          <option key={dept.DEPT_ID} value={dept.DEPT_ID}>
-                            {dept.DEPT_NAME}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          HDD
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.HDD || ''}
+                          onChange={(e) => setFormData({ ...formData, HDD: e.target.value })}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white"
+                          placeholder="مثال: 500GB, 1TB"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      الطابق {floors.length > 0 && `(${floors.length})`}
-                    </label>
-                    <select
-                      value={formData.FLOOR_ID || ''}
-                      onChange={(e) => setFormData({ ...formData, FLOOR_ID: Number(e.target.value) })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                    >
-                      <option value="">اختر الطابق</option>
-                      {floors.length === 0 ? (
-                        <option value="" disabled>لا توجد طوابق</option>
-                      ) : (
-                        floors.map(floor => (
-                          <option key={floor.FLOOR_ID} value={floor.FLOOR_ID}>
-                            {floor.FLOOR_NAME}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          RAM
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.RAM || ''}
+                          onChange={(e) => setFormData({ ...formData, RAM: e.target.value })}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white"
+                          placeholder="مثال: 8GB, 16GB"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      رقم القفل
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.LOCK_NUM || ''}
-                      onChange={(e) => setFormData({ ...formData, LOCK_NUM: e.target.value ? Number(e.target.value) : undefined })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="رقم القفل"
-                    />
-                  </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          IP Address
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.IP || ''}
+                          onChange={(e) => setFormData({ ...formData, IP: e.target.value })}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white"
+                          placeholder="مثال: 192.168.1.1"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      رقم السيريال
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.SERIAL || ''}
-                      onChange={(e) => setFormData({ ...formData, SERIAL: e.target.value })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          اسم الكمبيوتر
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.COMP_NAME || ''}
+                          onChange={(e) => setFormData({ ...formData, COMP_NAME: e.target.value })}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white"
+                          placeholder="أدخل اسم الكمبيوتر"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      النوع
-                    </label>
-                    <select
-                      value={formData.KIND || ''}
-                      onChange={(e) => setFormData({ ...formData, KIND: e.target.value })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                    >
-                      <option value="">اختر النوع</option>
-                      <option value="عهدة">عهدة</option>
-                      <option value="مشتريات">مشتريات</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      الحالة
-                    </label>
-                    <select
-                      value={formData.SITUATION || ''}
-                      onChange={(e) => setFormData({ ...formData, SITUATION: e.target.value })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                    >
-                      <option value="">اختر الحالة</option>
-                      <option value="عاطل">عاطل</option>
-                      <option value="تحت الإصلاح">تحت الإصلاح</option>
-                      <option value="صالح">صالح</option>
-                      <option value="ورشة">ورشة</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      HDD
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.HDD || ''}
-                      onChange={(e) => setFormData({ ...formData, HDD: e.target.value })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      RAM
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.RAM || ''}
-                      onChange={(e) => setFormData({ ...formData, RAM: e.target.value })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      IP Address
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.IP || ''}
-                      onChange={(e) => setFormData({ ...formData, IP: e.target.value })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      اسم الكمبيوتر
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.COMP_NAME || ''}
-                      onChange={(e) => setFormData({ ...formData, COMP_NAME: e.target.value })}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      الخصائص
-                    </label>
-                    <textarea
-                      value={formData.PROPERTIES || ''}
-                      onChange={(e) => setFormData({ ...formData, PROPERTIES: e.target.value })}
-                      rows={3}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          الخصائص
+                        </label>
+                        <textarea
+                          value={formData.PROPERTIES || ''}
+                          onChange={(e) => setFormData({ ...formData, PROPERTIES: e.target.value })}
+                          rows={4}
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white resize-none"
+                          placeholder="أدخل أي خصائص إضافية..."
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex gap-4 mt-8">
+              {/* Footer with Actions */}
+              <div className="sticky bottom-0 bg-white border-t border-slate-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-5 shadow-lg">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <button
                     onClick={handleSubmit}
-                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md"
+                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3.5 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                   >
                     <Save size={20} />
-                    <span>{editingItem ? 'تحديث' : 'إضافة'}</span>
+                    <span>{editingItem ? 'تحديث الصنف' : 'إضافة الصنف'}</span>
                   </button>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="flex-1 px-6 py-3 border border-slate-300 rounded-lg hover:bg-slate-50 transition-all"
+                    className="flex-1 sm:flex-initial sm:w-auto px-6 py-3.5 border-2 border-slate-300 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all duration-200"
                   >
                     إلغاء
                   </button>
