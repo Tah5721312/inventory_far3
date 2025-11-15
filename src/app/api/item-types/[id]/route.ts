@@ -4,10 +4,11 @@ import { getItemTypeById, updateItemType, deleteItemType } from '@/lib/db_utils'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const itemType = await getItemTypeById(parseInt(params.id));
+    const { id } = await params;
+    const itemType = await getItemTypeById(parseInt(id));
     
     if (!itemType) {
       return NextResponse.json(
@@ -28,9 +29,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { ITEM_TYPE_NAME, SUB_CAT_ID } = body;
 
@@ -43,7 +45,7 @@ export async function PUT(
       updateData.SUB_CAT_ID = parseInt(SUB_CAT_ID);
     }
 
-    const rowsAffected = await updateItemType(parseInt(params.id), updateData);
+    const rowsAffected = await updateItemType(parseInt(id), updateData);
 
     if (rowsAffected === 0) {
       return NextResponse.json(
@@ -78,10 +80,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const rowsAffected = await deleteItemType(parseInt(params.id));
+    const { id } = await params;
+    const rowsAffected = await deleteItemType(parseInt(id));
 
     if (rowsAffected === 0) {
       return NextResponse.json(

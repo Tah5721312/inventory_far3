@@ -1,10 +1,19 @@
 'use client';
 
-import { JWTPayload, UserInfoCardProps } from '@/lib/types';
 import { User, Shield, Calendar, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-
+interface UserInfoCardProps {
+  user: {
+    username: string;
+    isAdmin: boolean;
+    id: string | number;
+  };
+  fullUserData?: {
+    EMAIL: string;
+    CREATED_AT: string | Date;
+  };
+}
 
 export default function UserInfoCard({ user, fullUserData }: UserInfoCardProps) {
   const router = useRouter();

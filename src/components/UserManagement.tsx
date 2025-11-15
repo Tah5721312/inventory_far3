@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Plus, Edit, Trash2, Search, RotateCcw, Users, Shield } from 'lucide-react';
-import ButtonLink from '@/components/links/ButtonLink';
+import Link from 'next/link';
 import { DOMAIN } from '@/lib/constants';
 import { toastError, toastSuccess } from '@/lib/toast';
 
@@ -176,11 +176,11 @@ export default function UserManagement() {
               </div>
             </div>
             
-            <ButtonLink href='/new' variant='primary'
+            <Link href='/new'
             className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
               <Plus size={20} />
               <span>إضافة مستخدم جديد</span>
-            </ButtonLink>
+            </Link>
             
           </div>
         </div>

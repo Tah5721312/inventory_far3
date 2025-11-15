@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         username: body.username,
         email: body.email,
         password: hashedPassword,
-        roleId: 216, // Default role for patients
+        roleId: 216, // Default role for new users
         fullName: body.fullName || body.username,
         phone: body.phone || '',
         id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },

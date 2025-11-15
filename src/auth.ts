@@ -18,6 +18,7 @@ export const {
   signIn,
   signOut,
 } = NextAuth({
+  trustHost: true, // Trust localhost and other hosts in development
   secret: process.env.NEXTAUTH_SECRET || 'your-secret-key-here',
   session: { 
     strategy: "jwt",

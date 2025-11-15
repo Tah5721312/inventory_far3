@@ -131,7 +131,7 @@ export default function ItemsPage() {
       ]);
 
       // Helper function to safely extract array from response
-      const getArrayFromResponse = (data: any, fallback: any[] = [], dataType: string = 'data'): any[] => {
+      const getArrayFromResponse = (data: any, fallback: any[] = [], dataType = 'data'): any[] => {
         if (!data) {
           console.warn(`⚠️ ${dataType}: No data received`);
           return fallback;

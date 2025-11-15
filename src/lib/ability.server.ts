@@ -13,12 +13,6 @@ const subjectMap: Record<string, Subjects> = {
   ALL: 'all',
   USERS: 'User',
   USER: 'User',
-  PATIENTS: 'Patient',
-  PATIENT: 'Patient',
-  DOCTORS: 'Doctor',
-  DOCTOR: 'Doctor',
-  APPOINTMENTS: 'Appointment',
-  APPOINTMENT: 'Appointment',
   DASHBOARD: 'Dashboard',
 };
 
@@ -80,8 +74,7 @@ export async function defineAbilityFromDB(userId: number): Promise<AppAbility> {
 
 export function defineGuestAbility(): AppAbility {
   const guestRules: AbilityRule[] = [
-    { action: 'read', subject: 'Doctor' },
-    { action: 'read', subject: 'Appointment' },
+    { action: 'read', subject: 'Item' },
   ];
   return createAbilityFromRules(guestRules);
 }

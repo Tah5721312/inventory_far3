@@ -26,7 +26,7 @@ export async function DELETE(
       { id: Number(id) },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
-    const user = result.rows?.[0];
+    const user = result.rows?.[0] as { ID: number; USERNAME: string; EMAIL: string } | undefined;
 
     if (!user) {
       return NextResponse.json({ message: "user not found" }, { status: 404 });
@@ -77,7 +77,7 @@ export async function GET(
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
 
-    const user = result.rows?.[0];
+    const user = result.rows?.[0] as { ID: number; USERNAME: string; EMAIL: string; ROLE_ID?: number; CREATED_AT?: string } | undefined;
     if (!user) {
       return NextResponse.json({ message: "user not found" }, { status: 404 });
     }
@@ -117,7 +117,7 @@ export async function PUT(
       { id: Number(id) },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
-    const user = result.rows?.[0];
+    const user = result.rows?.[0] as { ID: number; USERNAME: string; EMAIL: string; PASSWORD: string } | undefined;
     if (!user) {
       return NextResponse.json({ message: "user not found" }, { status: 404 });
     }

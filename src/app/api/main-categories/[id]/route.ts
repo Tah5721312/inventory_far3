@@ -10,10 +10,11 @@ import {
 // GET: جلب تصنيف واحد
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: idString } = await params;
+    const id = parseInt(idString);
     const category = await getMainCategoryById(id);
 
     if (!category) {
@@ -35,10 +36,11 @@ export async function GET(
 // PUT: تحديث تصنيف
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: idString } = await params;
+    const id = parseInt(idString);
     const body = await request.json();
     const { CAT_NAME, DESCRIPTION } = body;
 
@@ -94,10 +96,11 @@ export async function PUT(
 // DELETE: حذف تصنيف
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: idString } = await params;
+    const id = parseInt(idString);
     const rowsAffected = await deleteMainCategory(id);
 
     if (rowsAffected === 0) {

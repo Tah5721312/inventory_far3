@@ -1033,7 +1033,7 @@ export async function getStatistics() {
       if (!row) return null;
       const cleaned: any = {};
       for (const key in row) {
-        if (row.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(row, key)) {
           const value = row[key];
           // تحويل Oracle number إلى JavaScript number
           if (typeof value === 'object' && value !== null && 'toNumber' in value) {

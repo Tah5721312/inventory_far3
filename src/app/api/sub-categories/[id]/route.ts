@@ -10,10 +10,11 @@ import {
 // GET: جلب تصنيف فرعي واحد
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: idString } = await params;
+    const id = parseInt(idString);
     const subCategory = await getSubCategoryById(id);
 
     if (!subCategory) {
@@ -36,10 +37,11 @@ export async function GET(
 // PUT: تحديث تصنيف فرعي
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: idString } = await params;
+    const id = parseInt(idString);
     const body = await request.json();
     const { SUB_CAT_NAME, CAT_ID, DESCRIPTION } = body;
 
@@ -102,10 +104,11 @@ export async function PUT(
 // DELETE: حذف تصنيف فرعي
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: idString } = await params;
+    const id = parseInt(idString);
     const rowsAffected = await deleteSubCategory(id);
 
     if (rowsAffected === 0) {

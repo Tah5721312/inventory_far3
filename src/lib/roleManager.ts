@@ -6,8 +6,8 @@ export async function getRoleFromCookies(): Promise<Role> {
   const cookieStore = await cookies();
   const role = cookieStore.get('role')?.value as Role;
   
-  // إذا لم يكن هناك دور محدد، نعيد 'patient' كافتراضي
-  return role || 'patient';
+  // إذا لم يكن هناك دور محدد، نعيد 'GUEST' كافتراضي
+  return role || 'GUEST';
 }
 
 // دالة للتحقق من صلاحية معينة
@@ -45,9 +45,6 @@ export async function getRoleInfo(): Promise<{
   permissions: {action: string, subject: string}[];
   canAccessDashboard: boolean;
   canManageUsers: boolean;
-  canManagePatients: boolean;
-  canManageDoctors: boolean;
-  canManageAppointments: boolean;
 }> {
   const role = await getRoleFromCookies();
   const permissions = await getCurrentPermissions();
@@ -57,8 +54,5 @@ export async function getRoleInfo(): Promise<{
     permissions,
     canAccessDashboard: await hasPermission('read', 'Dashboard'),
     canManageUsers: await hasPermission('manage', 'User'),
-    canManagePatients: await hasPermission('manage', 'Patient'),
-    canManageDoctors: await hasPermission('manage', 'Doctor'),
-    canManageAppointments: await hasPermission('manage', 'Appointment'),
   };
 }
