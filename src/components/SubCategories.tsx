@@ -121,7 +121,9 @@ export default function SubCategoriesPage() {
         fetchData();
         handleCloseModal();
       } else {
-        showNotification('error', result.error || 'حدث خطأ');
+        // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
+        const errorMessage = typeof result.error === 'string' ? result.error : 'حدث خطأ';
+        showNotification('error', errorMessage);
       }
     } catch (error) {
       showNotification('error', 'فشل في حفظ البيانات');
@@ -143,7 +145,9 @@ export default function SubCategoriesPage() {
         showNotification('success', 'تم الحذف بنجاح');
         fetchData();
       } else {
-        showNotification('error', result.error || 'فشل في الحذف');
+        // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
+        const errorMessage = typeof result.error === 'string' ? result.error : 'فشل في الحذف';
+        showNotification('error', errorMessage);
       }
     } catch (error) {
       showNotification('error', 'فشل في حذف التصنيف الفرعي');

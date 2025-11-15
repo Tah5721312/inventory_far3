@@ -7,6 +7,7 @@ import {
   updateSubCategory,
   deleteSubCategory,
 } from '@/lib/db_utils';
+import { sanitizeInput, isValidText } from '@/lib/security';
 
 // GET: جلب تصنيف فرعي واحد
 export async function GET(
@@ -20,6 +21,15 @@ export async function GET(
 
     const { id: idString } = await params;
     const id = parseInt(idString);
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(id) || id <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'معرف التصنيف الفرعي غير صحيح' },
+        { status: 400 }
+      );
+    }
+    
     const subCategory = await getSubCategoryById(id);
 
     if (!subCategory) {
@@ -51,27 +61,79 @@ export async function PUT(
 
     const { id: idString } = await params;
     const id = parseInt(idString);
-    const body = await request.json();
-    const { SUB_CAT_NAME, CAT_ID, DESCRIPTION } = body;
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(id) || id <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'معرف التصنيف الفرعي غير صحيح' },
+        { status: 400 }
+      );
+    }
 
-    if (!SUB_CAT_NAME || SUB_CAT_NAME.trim() === '') {
+    const body = await request.json();
+    let { SUB_CAT_NAME, DESCRIPTION } = body;
+    const { CAT_ID } = body;
+
+    // التحقق من وجود الاسم
+    if (!SUB_CAT_NAME || typeof SUB_CAT_NAME !== 'string') {
       return NextResponse.json(
         { success: false, error: 'اسم التصنيف الفرعي مطلوب' },
         { status: 400 }
       );
     }
 
-    if (!CAT_ID || isNaN(CAT_ID)) {
+    // Sanitize و validate input
+    SUB_CAT_NAME = sanitizeInput(SUB_CAT_NAME.trim());
+    
+    if (SUB_CAT_NAME === '') {
       return NextResponse.json(
-        { success: false, error: 'التصنيف الرئيسي مطلوب' },
+        { success: false, error: 'اسم التصنيف الفرعي مطلوب' },
         { status: 400 }
       );
     }
 
+    // التحقق من طول الاسم
+    if (SUB_CAT_NAME.length > 200) {
+      return NextResponse.json(
+        { success: false, error: 'اسم التصنيف الفرعي طويل جداً (الحد الأقصى 200 حرف)' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من محتوى الاسم
+    if (!isValidText(SUB_CAT_NAME)) {
+      return NextResponse.json(
+        { success: false, error: 'اسم التصنيف الفرعي يحتوي على أحرف غير مسموح بها' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من CAT_ID
+    const catIdNum = typeof CAT_ID === 'string' ? parseInt(CAT_ID) : Number(CAT_ID);
+    if (!CAT_ID || isNaN(catIdNum) || catIdNum <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'التصنيف الرئيسي مطلوب وصحيح' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize الوصف (اختياري)
+    if (DESCRIPTION && typeof DESCRIPTION === 'string') {
+      DESCRIPTION = sanitizeInput(DESCRIPTION.trim());
+      if (DESCRIPTION.length > 1000) {
+        return NextResponse.json(
+          { success: false, error: 'الوصف طويل جداً (الحد الأقصى 1000 حرف)' },
+          { status: 400 }
+        );
+      }
+    } else {
+      DESCRIPTION = undefined;
+    }
+
     const rowsAffected = await updateSubCategory(id, {
-      SUB_CAT_NAME: SUB_CAT_NAME.trim(),
-      CAT_ID: parseInt(CAT_ID),
-      DESCRIPTION: DESCRIPTION?.trim() || undefined,
+      SUB_CAT_NAME,
+      CAT_ID: catIdNum,
+      DESCRIPTION,
     });
 
     if (rowsAffected === 0) {
@@ -85,9 +147,9 @@ export async function PUT(
       success: true,
       data: {
         SUB_CAT_ID: id,
-        SUB_CAT_NAME: SUB_CAT_NAME.trim(),
-        CAT_ID: parseInt(CAT_ID),
-        DESCRIPTION: DESCRIPTION?.trim() || null,
+        SUB_CAT_NAME,
+        CAT_ID: catIdNum,
+        DESCRIPTION: DESCRIPTION || null,
       },
     });
   } catch (error) {
@@ -103,8 +165,9 @@ export async function PUT(
       );
     }
     
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
-      { success: false, error: 'فشل في تحديث التصنيف الفرعي', details: errorMessage },
+      { success: false, error: 'فشل في تحديث التصنيف الفرعي' },
       { status: 500 }
     );
   }
@@ -122,6 +185,15 @@ export async function DELETE(
 
     const { id: idString } = await params;
     const id = parseInt(idString);
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(id) || id <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'معرف التصنيف الفرعي غير صحيح' },
+        { status: 400 }
+      );
+    }
+    
     const rowsAffected = await deleteSubCategory(id);
 
     if (rowsAffected === 0) {

@@ -7,6 +7,7 @@ import {
   updateMainCategory,
   deleteMainCategory,
 } from '@/lib/db_utils';
+import { sanitizeInput, isValidText } from '@/lib/security';
 
 // GET: جلب تصنيف واحد
 export async function GET(
@@ -20,6 +21,15 @@ export async function GET(
 
     const { id: idString } = await params;
     const id = parseInt(idString);
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(id) || id <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'معرف التصنيف غير صحيح' },
+        { status: 400 }
+      );
+    }
+    
     const category = await getMainCategoryById(id);
 
     if (!category) {
@@ -50,20 +60,68 @@ export async function PUT(
 
     const { id: idString } = await params;
     const id = parseInt(idString);
-    const body = await request.json();
-    const { CAT_NAME, DESCRIPTION } = body;
+    
+    // التحقق من صحة ID
+    if (isNaN(id) || id <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'معرف التصنيف غير صحيح' },
+        { status: 400 }
+      );
+    }
 
-    // التحقق من الاسم فقط (الوصف اختياري)
-    if (!CAT_NAME || CAT_NAME.trim() === '') {
+    const body = await request.json();
+    let { CAT_NAME, DESCRIPTION } = body;
+
+    // التحقق من وجود الاسم
+    if (!CAT_NAME || typeof CAT_NAME !== 'string') {
       return NextResponse.json(
         { success: false, error: 'اسم التصنيف مطلوب' },
         { status: 400 }
       );
     }
 
+    // Sanitize و validate input
+    CAT_NAME = sanitizeInput(CAT_NAME.trim());
+    
+    if (CAT_NAME === '') {
+      return NextResponse.json(
+        { success: false, error: 'اسم التصنيف مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من طول الاسم
+    if (CAT_NAME.length > 200) {
+      return NextResponse.json(
+        { success: false, error: 'اسم التصنيف طويل جداً (الحد الأقصى 200 حرف)' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من محتوى الاسم
+    if (!isValidText(CAT_NAME)) {
+      return NextResponse.json(
+        { success: false, error: 'اسم التصنيف يحتوي على أحرف غير مسموح بها' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize الوصف (اختياري)
+    if (DESCRIPTION && typeof DESCRIPTION === 'string') {
+      DESCRIPTION = sanitizeInput(DESCRIPTION.trim());
+      if (DESCRIPTION.length > 1000) {
+        return NextResponse.json(
+          { success: false, error: 'الوصف طويل جداً (الحد الأقصى 1000 حرف)' },
+          { status: 400 }
+        );
+      }
+    } else {
+      DESCRIPTION = null;
+    }
+
     const rowsAffected = await updateMainCategory(id, {
-      CAT_NAME: CAT_NAME.trim(),
-      DESCRIPTION: DESCRIPTION?.trim() || null, // ✅ هنا نضيف الوصف
+      CAT_NAME,
+      DESCRIPTION,
     });
 
     if (rowsAffected === 0) {
@@ -77,8 +135,8 @@ export async function PUT(
       success: true,
       data: {
         CAT_ID: id,
-        CAT_NAME: CAT_NAME.trim(),
-        DESCRIPTION: DESCRIPTION?.trim() || null,
+        CAT_NAME,
+        DESCRIPTION: DESCRIPTION || null,
       },
     });
   } catch (error) {
@@ -94,8 +152,9 @@ export async function PUT(
       );
     }
     
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
-      { success: false, error: 'فشل في تحديث التصنيف', details: errorMessage },
+      { success: false, error: 'فشل في تحديث التصنيف' },
       { status: 500 }
     );
   }
@@ -114,6 +173,15 @@ export async function DELETE(
 
     const { id: idString } = await params;
     const id = parseInt(idString);
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(id) || id <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'معرف التصنيف غير صحيح' },
+        { status: 400 }
+      );
+    }
+    
     const rowsAffected = await deleteMainCategory(id);
 
     if (rowsAffected === 0) {

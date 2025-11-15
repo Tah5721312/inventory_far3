@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helper';
 import { executeQuery } from '@/lib/database';
 import bcrypt from 'bcryptjs';
+import { sanitizeInput, isValidText, isValidEmail } from '@/lib/security';
 
 // Interface for user with role and permissions
 interface UserWithRolePermissions {
@@ -156,12 +157,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ users });
   } catch (error) {
-    console.error('Error fetching users:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    console.error('Error details:', { errorMessage, errorStack });
+    console.error('Error fetching users:', errorMessage);
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
-      { error: 'Failed to fetch users', details: errorMessage },
+      { error: 'Failed to fetch users' },
       { status: 500 }
     );
   }
@@ -178,38 +178,230 @@ export async function POST(request: NextRequest) {
     if (authCheck) return authCheck;
 
     const body = await request.json();
-    const { username, email, fullName, password, roleId, phone, deptId, rankId, floorId, isActive } = body;
+    let { username, email, fullName, phone, deptId, rankId, floorId, isActive } = body;
+    const { password, roleId } = body;
 
     // Validate required fields
-    if (!username || !email || !fullName || !password || !roleId) {
+    if (!username || typeof username !== 'string') {
       return NextResponse.json(
-        { error: 'All fields are required' },
+        { error: 'اسم المستخدم مطلوب' },
         { status: 400 }
       );
     }
 
+    if (!email || typeof email !== 'string') {
+      return NextResponse.json(
+        { error: 'البريد الإلكتروني مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    if (!fullName || typeof fullName !== 'string') {
+      return NextResponse.json(
+        { error: 'الاسم الكامل مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    if (!password || typeof password !== 'string') {
+      return NextResponse.json(
+        { error: 'كلمة المرور مطلوبة' },
+        { status: 400 }
+      );
+    }
+
+    if (!roleId || (typeof roleId !== 'number' && typeof roleId !== 'string')) {
+      return NextResponse.json(
+        { error: 'الدور مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize و validate input
+    username = sanitizeInput(username.trim());
+    if (username === '') {
+      return NextResponse.json(
+        { error: 'اسم المستخدم مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    if (username.length > 100) {
+      return NextResponse.json(
+        { error: 'اسم المستخدم طويل جداً (الحد الأقصى 100 حرف)' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidText(username)) {
+      return NextResponse.json(
+        { error: 'اسم المستخدم يحتوي على أحرف غير مسموح بها' },
+        { status: 400 }
+      );
+    }
+
+    email = sanitizeInput(email.trim().toLowerCase());
+    if (email === '') {
+      return NextResponse.json(
+        { error: 'البريد الإلكتروني مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: 'البريد الإلكتروني غير صحيح' },
+        { status: 400 }
+      );
+    }
+
+    if (email.length > 255) {
+      return NextResponse.json(
+        { error: 'البريد الإلكتروني طويل جداً (الحد الأقصى 255 حرف)' },
+        { status: 400 }
+      );
+    }
+
+    fullName = sanitizeInput(fullName.trim());
+    if (fullName === '') {
+      return NextResponse.json(
+        { error: 'الاسم الكامل مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    if (fullName.length > 200) {
+      return NextResponse.json(
+        { error: 'الاسم الكامل طويل جداً (الحد الأقصى 200 حرف)' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidText(fullName)) {
+      return NextResponse.json(
+        { error: 'الاسم الكامل يحتوي على أحرف غير مسموح بها' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من كلمة المرور (طول مناسب)
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' },
+        { status: 400 }
+      );
+    }
+
+    if (password.length > 255) {
+      return NextResponse.json(
+        { error: 'كلمة المرور طويلة جداً (الحد الأقصى 255 حرف)' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من roleId
+    const roleIdNum = typeof roleId === 'string' ? parseInt(roleId) : Number(roleId);
+    if (isNaN(roleIdNum) || roleIdNum <= 0) {
+      return NextResponse.json(
+        { error: 'الدور غير صحيح' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize phone (optional)
+    if (phone && typeof phone === 'string') {
+      phone = sanitizeInput(phone.trim());
+      if (phone.length > 50) {
+        return NextResponse.json(
+          { error: 'رقم الهاتف طويل جداً (الحد الأقصى 50 حرف)' },
+          { status: 400 }
+        );
+      }
+    } else {
+      phone = null;
+    }
+
+    // Validate optional IDs
+    if (deptId !== undefined && deptId !== null) {
+      const deptIdNum = typeof deptId === 'string' ? parseInt(deptId) : Number(deptId);
+      if (isNaN(deptIdNum) || deptIdNum <= 0) {
+        return NextResponse.json(
+          { error: 'معرف القسم غير صحيح' },
+          { status: 400 }
+        );
+      }
+      deptId = deptIdNum;
+    } else {
+      deptId = null;
+    }
+
+    if (rankId !== undefined && rankId !== null) {
+      const rankIdNum = typeof rankId === 'string' ? parseInt(rankId) : Number(rankId);
+      if (isNaN(rankIdNum) || rankIdNum <= 0) {
+        return NextResponse.json(
+          { error: 'معرف الرتبة غير صحيح' },
+          { status: 400 }
+        );
+      }
+      rankId = rankIdNum;
+    } else {
+      rankId = null;
+    }
+
+    if (floorId !== undefined && floorId !== null) {
+      const floorIdNum = typeof floorId === 'string' ? parseInt(floorId) : Number(floorId);
+      if (isNaN(floorIdNum) || floorIdNum <= 0) {
+        return NextResponse.json(
+          { error: 'معرف الطابق غير صحيح' },
+          { status: 400 }
+        );
+      }
+      floorId = floorIdNum;
+    } else {
+      floorId = null;
+    }
+
+    // Validate isActive
+    if (isActive !== undefined && isActive !== null) {
+      if (typeof isActive !== 'number' && typeof isActive !== 'string') {
+        return NextResponse.json(
+          { error: 'الحالة غير صحيحة' },
+          { status: 400 }
+        );
+      }
+      isActive = Number(isActive);
+      if (isActive !== 0 && isActive !== 1) {
+        return NextResponse.json(
+          { error: 'الحالة يجب أن تكون 0 أو 1' },
+          { status: 400 }
+        );
+      }
+    } else {
+      isActive = 1;
+    }
+
     // Check if username already exists
     const checkUserQuery = `
-      SELECT COUNT(*) as count FROM far3.USERS WHERE USERNAME = :username
+      SELECT COUNT(*) as count FROM far3.USERS WHERE UPPER(USERNAME) = UPPER(:username)
     `;
     const checkResult = await executeQuery<{ count: number }>(checkUserQuery, { username });
     
     if (checkResult.rows[0].count > 0) {
       return NextResponse.json(
-        { error: 'Username already exists' },
+        { error: 'اسم المستخدم موجود بالفعل' },
         { status: 409 }
       );
     }
 
     // Check if email already exists
     const checkEmailQuery = `
-      SELECT COUNT(*) as count FROM far3.USERS WHERE EMAIL = :email
+      SELECT COUNT(*) as count FROM far3.USERS WHERE UPPER(EMAIL) = UPPER(:email)
     `;
     const checkEmailResult = await executeQuery<{ count: number }>(checkEmailQuery, { email });
     
     if (checkEmailResult.rows[0].count > 0) {
       return NextResponse.json(
-        { error: 'Email already exists' },
+        { error: 'البريد الإلكتروني موجود بالفعل' },
         { status: 409 }
       );
     }
@@ -228,12 +420,12 @@ export async function POST(request: NextRequest) {
       email,
       fullName,
       password: hashedPassword,
-      roleId,
-      isActive: isActive !== undefined ? isActive : 1,
-      phone: phone || null,
-      deptId: deptId || null,
-      rankId: rankId || null,
-      floorId: floorId || null
+      roleId: roleIdNum,
+      isActive,
+      phone,
+      deptId,
+      rankId,
+      floorId
     });
 
     return NextResponse.json({ 

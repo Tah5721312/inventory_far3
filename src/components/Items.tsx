@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, X, Save, Filter, BarChart3, ArrowUpDown, ArrowUp, ArrowDown, FileText } from 'lucide-react';
 import Link from 'next/link';
+import { escapeHtml } from '@/lib/security';
 
 interface Item {
   ITEM_ID: number;
@@ -305,7 +306,8 @@ export default function ItemsPage() {
         // في حالة كان الـ response array مباشر
         setItems(result);
       } else if (result.error) {
-        const errorMsg = result.details ? `${result.error}: ${result.details}` : result.error;
+        // ✅ عرض رسالة خطأ آمنة (لا نعرض details لتجنب Information Disclosure)
+        const errorMsg = typeof result.error === 'string' ? result.error : 'فشل في جلب البيانات';
         console.error('Server error:', errorMsg);
         alert(errorMsg);
         setItems([]);
@@ -452,7 +454,9 @@ export default function ItemsPage() {
 
         const result = await response.json();
         if (!result.success) {
-          throw new Error(result.details || result.error || 'فشل التحديث');
+          // ✅ عرض رسالة خطأ آمنة (لا نعرض details لتجنب Information Disclosure)
+          const errorMsg = typeof result.error === 'string' ? result.error : 'فشل التحديث';
+          throw new Error(errorMsg);
         }
       } else {
         const response = await fetch('/api/items', {
@@ -463,7 +467,9 @@ export default function ItemsPage() {
 
         const result = await response.json();
         if (!result.success) {
-          throw new Error(result.details || result.error || 'فشل الإضافة');
+          // ✅ عرض رسالة خطأ آمنة (لا نعرض details لتجنب Information Disclosure)
+          const errorMsg = typeof result.error === 'string' ? result.error : 'فشل الإضافة';
+          throw new Error(errorMsg);
         }
       }
 
@@ -501,7 +507,8 @@ export default function ItemsPage() {
   const handleExportItemsPDF = () => {
     if (sortedItems.length === 0) return;
 
-    // الحصول على URL الصورة
+    // الحصول على URL الصورة (آمن - window.location.origin لا يمكن تلاعبه)
+    // ✅ window.location.origin آمن لأنه لا يحتوي على أحرف خطيرة في HTML attributes
     const logoUrl = window.location.origin + '/EDARA_LOGO.png';
     
     // تحويل الأرقام إلى الأرقام العربية
@@ -562,32 +569,32 @@ export default function ItemsPage() {
           items.forEach((item, itemIndex) => {
             tableRows += '<tr>';
             
-            // الصنف الرئيسي - فقط في الصف الأول
+            // الصنف الرئيسي - فقط في الصف الأول (escape HTML لتجنب XSS)
             if (isFirstMainRow && isFirstSubRow && isFirstItemTypeRow) {
-              tableRows += `<td rowspan="${mainCatRowspan}" style="border: 2px solid #000; padding: 6px 8px; text-align: center; font-size: 11px; font-weight: bold; vertical-align: top;">${mainCat}</td>`;
+              tableRows += `<td rowspan="${mainCatRowspan}" style="border: 2px solid #000; padding: 6px 8px; text-align: center; font-size: 11px; font-weight: bold; vertical-align: top;">${escapeHtml(mainCat)}</td>`;
               isFirstMainRow = false;
             }
             
-            // الصنف الفرعي - فقط في الصف الأول
+            // الصنف الفرعي - فقط في الصف الأول (escape HTML لتجنب XSS)
             if (isFirstSubRow && isFirstItemTypeRow) {
-              tableRows += `<td rowspan="${subCatRowspan}" style="border: 2px solid #000; padding: 6px 8px; text-align: center; font-size: 11px; font-weight: bold; vertical-align: top;">${subCat}</td>`;
+              tableRows += `<td rowspan="${subCatRowspan}" style="border: 2px solid #000; padding: 6px 8px; text-align: center; font-size: 11px; font-weight: bold; vertical-align: top;">${escapeHtml(subCat)}</td>`;
               isFirstSubRow = false;
             }
             
-            // نوع الصنف - فقط في الصف الأول من هذا النوع
+            // نوع الصنف - فقط في الصف الأول من هذا النوع (escape HTML لتجنب XSS)
             if (isFirstItemTypeRow) {
-              tableRows += `<td rowspan="${itemTypeRowspan}" style="border: 2px solid #000; padding: 6px 8px; text-align: center; font-size: 11px; vertical-align: top;">${itemType}</td>`;
+              tableRows += `<td rowspan="${itemTypeRowspan}" style="border: 2px solid #000; padding: 6px 8px; text-align: center; font-size: 11px; vertical-align: top;">${escapeHtml(itemType)}</td>`;
               isFirstItemTypeRow = false;
             }
             
-            // اسم الصنف
-            tableRows += `<td style="border: 2px solid #000; padding: 6px 8px; text-align: center; font-size: 11px;">${item.ITEM_NAME || '-'}</td>`;
+            // اسم الصنف (escape HTML لتجنب XSS)
+            tableRows += `<td style="border: 2px solid #000; padding: 6px 8px; text-align: center; font-size: 11px;">${escapeHtml(item.ITEM_NAME || '-')}</td>`;
             
-            // السريال
-            tableRows += `<td style="border: 2px solid #000; padding: 6px 8px; text-align: center; font-size: 11px; font-family: monospace;">${item.SERIAL || '-'}</td>`;
+            // السريال (escape HTML لتجنب XSS)
+            tableRows += `<td style="border: 2px solid #000; padding: 6px 8px; text-align: center; font-size: 11px; font-family: monospace;">${escapeHtml(item.SERIAL || '-')}</td>`;
             
-            // مكان التواجد (القسم + الطابق)
-            const location = [item.DEPT_NAME, item.FLOOR_NAME].filter(Boolean).join(' / ') || '-';
+            // مكان التواجد (القسم + الطابق) (escape HTML لتجنب XSS)
+            const location = [item.DEPT_NAME, item.FLOOR_NAME].filter(Boolean).map(escapeHtml).join(' / ') || '-';
             tableRows += `<td style="border: 2px solid #000; padding: 6px 8px; text-align: center; font-size: 11px;">${location}</td>`;
             
             tableRows += '</tr>';
@@ -725,7 +732,7 @@ export default function ItemsPage() {
             <!-- Header -->
             <div class="header">
               <div class="logo">
-                <img src="${logoUrl}" alt="شعار" onerror="this.style.display='none'; this.parentElement.innerHTML='[شعار]';" />
+                <img src="${logoUrl}" alt="شعار" onerror="this.style.display='none'; this.nextElementSibling ? this.nextElementSibling.textContent = '[شعار]' : this.parentElement.appendChild(document.createTextNode('[شعار]'));" />
               </div>
               <div class="header-content">
                 <div class="header-text">tah57</div>

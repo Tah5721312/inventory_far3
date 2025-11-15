@@ -91,7 +91,9 @@ export default function UnifiedManagementPage() {
         await fetchDepartments();
         closeDeptModal();
       } else {
-        setDeptError(data.error || 'فشل في حفظ القسم');
+        // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
+        const errorMessage = typeof data.error === 'string' ? data.error : 'فشل في حفظ القسم';
+        setDeptError(errorMessage);
       }
     } catch (error) {
       console.error('Error submitting:', error);
@@ -161,7 +163,9 @@ export default function UnifiedManagementPage() {
         await fetchRanks();
         closeRankModal();
       } else {
-        setRankError(data.error || 'فشل في حفظ الرتبة');
+        // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
+        const errorMessage = typeof data.error === 'string' ? data.error : 'فشل في حفظ الرتبة';
+        setRankError(errorMessage);
       }
     } catch (error) {
       console.error('Error submitting:', error);
@@ -231,7 +235,9 @@ export default function UnifiedManagementPage() {
         await fetchFloors();
         closeFloorModal();
       } else {
-        setFloorError(data.error || 'فشل في حفظ الطابق');
+        // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
+        const errorMessage = typeof data.error === 'string' ? data.error : 'فشل في حفظ الطابق';
+        setFloorError(errorMessage);
       }
     } catch (error) {
       console.error('Error submitting:', error);

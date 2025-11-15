@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helper';
 import { getAllDepartments, createDepartment } from '@/lib/db_utils';
+import { sanitizeInput, isValidText } from '@/lib/security';
 
 export async function GET() {
   try {
@@ -16,8 +17,9 @@ export async function GET() {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Error fetching departments:', errorMessage);
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
-      { success: false, error: 'فشل في جلب الأقسام', details: errorMessage },
+      { success: false, error: 'فشل في جلب الأقسام' },
       { status: 500 }
     );
   }
@@ -30,16 +32,43 @@ export async function POST(request: NextRequest) {
     if (authCheck) return authCheck;
 
     const body = await request.json();
-    const { DEPT_NAME } = body;
+    let { DEPT_NAME } = body;
 
-    if (!DEPT_NAME || DEPT_NAME.trim() === '') {
+    // التحقق من وجود البيانات
+    if (!DEPT_NAME || typeof DEPT_NAME !== 'string') {
       return NextResponse.json(
         { success: false, error: 'اسم القسم مطلوب' },
         { status: 400 }
       );
     }
 
-    const newDeptId = await createDepartment({ DEPT_NAME: DEPT_NAME.trim() });
+    // Sanitize و validate input
+    DEPT_NAME = sanitizeInput(DEPT_NAME.trim());
+    
+    if (DEPT_NAME === '') {
+      return NextResponse.json(
+        { success: false, error: 'اسم القسم مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من طول الاسم
+    if (DEPT_NAME.length > 200) {
+      return NextResponse.json(
+        { success: false, error: 'اسم القسم طويل جداً (الحد الأقصى 200 حرف)' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من محتوى الاسم (منع HTML/Script tags)
+    if (!isValidText(DEPT_NAME)) {
+      return NextResponse.json(
+        { success: false, error: 'اسم القسم يحتوي على أحرف غير مسموح بها' },
+        { status: 400 }
+      );
+    }
+
+    const newDeptId = await createDepartment({ DEPT_NAME });
     
     return NextResponse.json(
       { success: true, message: 'تم إنشاء القسم بنجاح', id: newDeptId },
@@ -58,8 +87,9 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
-      { success: false, error: 'فشل في إنشاء القسم', details: errorMessage },
+      { success: false, error: 'فشل في إنشاء القسم' },
       { status: 500 }
     );
   }

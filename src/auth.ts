@@ -1,3 +1,5 @@
+import 'server-only';
+
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -35,22 +37,17 @@ export const {
         password: { label: "Password", type: "password" },
       },
       authorize: async (creds) => {
-        console.log("🔐 Starting authorization...");
-        
         const email = (creds?.email || "").toString().trim();
         const password = (creds?.password || "").toString();
 
         if (!email || !password) {
-          console.error("❌ Missing credentials");
           return null;
         }
 
         let connection;
         try {
-          console.log("📡 Getting database connection...");
           connection = await getConnection();
           
-          console.log("🔍 Searching for user:", email);
           const result = await connection.execute<OracleUser>(
             `SELECT USER_ID AS ID, USERNAME, EMAIL, PASSWORD, ROLE_ID 
              FROM far3.USERS 
@@ -62,23 +59,15 @@ export const {
           const user = result.rows?.[0];
           
           if (!user) {
-            console.error("❌ User not found:", email);
             return null;
           }
 
-          console.log("✅ User found:", user.EMAIL);
-          console.log("🔑 Comparing passwords...");
-          
           // إضافة معالجة خاصة للـ password
           const ok = await bcrypt.compare(password, user.PASSWORD);
           
           if (!ok) {
-            console.error("❌ Password mismatch");
             return null;
           }
-
-          console.log("✅ Password matched!");
-          console.log("👤 Creating user session...");
 
           const userSession = {
             id: String(user.ID),
@@ -88,18 +77,16 @@ export const {
             roleId: user.ROLE_ID ?? 0,
           };
 
-          console.log("✅ User session created:", userSession);
           return userSession as any;
 
         } catch (err: any) {
+          // تسجيل الأخطاء فقط في حالة وجود مشكلة فعلية
           console.error("❌ Authorization error:", err.message);
-          console.error("Stack:", err.stack);
           return null;
         } finally {
           if (connection) {
             try {
               await connection.close();
-              console.log("✅ Connection closed");
             } catch (closeErr: any) {
               console.error("❌ Error closing connection:", closeErr.message);
             }
@@ -112,11 +99,9 @@ export const {
     maxAge: 24 * 60 * 60,
   },
   callbacks: {
-    async jwt({ token, user, trigger }) {
-      console.log("🔄 JWT callback - trigger:", trigger);
-      
+    async jwt({ token, user }) {
+      // JWT callback يتم استدعاؤه بشكل متكرر - لا نضع console logs هنا
       if (user) {
-        console.log("✅ Adding user to token:", user);
         token.id = (user as any).id;
         token.isAdmin = (user as any).isAdmin ?? false;
         token.roleId = (user as any).roleId ?? 0;
@@ -126,8 +111,7 @@ export const {
       return token;
     },
     async session({ session, token }) {
-      console.log("🔄 Session callback");
-      
+      // Session callback يتم استدعاؤه بشكل متكرر - لا نضع console logs هنا
       session.user = {
         id: String((token as any).id ?? ""),
         name: session.user?.name || "",
@@ -137,11 +121,10 @@ export const {
         isGuest: Boolean((token as any).isGuest),
       } as any;
       
-      console.log("✅ Session created:", session.user);
       return session;
     },
   },
-  debug: process.env.NODE_ENV === 'development', // Enable debug in development
+  debug: false, // تعطيل debug logs لتجنب التكرار المفرط
 });
 
 export { GET as GETAuth, POST as POSTAuth };

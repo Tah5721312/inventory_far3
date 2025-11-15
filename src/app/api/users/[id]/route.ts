@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helper';
 import { executeQuery } from '@/lib/database';
+import { sanitizeInput, isValidText, isValidEmail } from '@/lib/security';
 
 export async function GET(
   request: NextRequest,
@@ -13,6 +14,14 @@ export async function GET(
 
     const { id } = await params;
     const userId = parseInt(id);
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(userId) || userId <= 0) {
+      return NextResponse.json(
+        { error: 'معرف المستخدم غير صحيح' },
+        { status: 400 }
+      );
+    }
 
     const query = `
       SELECT 
@@ -136,12 +145,32 @@ export async function PUT(
 
     const { id } = await params;
     const userId = parseInt(id);
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(userId) || userId <= 0) {
+      return NextResponse.json(
+        { error: 'معرف المستخدم غير صحيح' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
-    const { username, email, fullName, roleId, newUserId, phone, deptId, rankId, floorId, isActive } = body;
+    let { username, email, fullName, phone } = body;
+    const { roleId, newUserId, deptId, rankId, floorId, isActive } = body;
 
     // If the client requests changing the USER_ID, validate uniqueness first
     let effectiveUserId = userId;
+    
+    // Validate newUserId if provided
     if (typeof newUserId === 'number' && newUserId !== userId) {
+      if (isNaN(newUserId) || newUserId <= 0) {
+        return NextResponse.json(
+          { error: 'معرف المستخدم الجديد غير صحيح' },
+          { status: 400 }
+        );
+      }
+      
+      // Check if newUserId already exists
       const existsQuery = `
         SELECT COUNT(*) as count
         FROM far3.USERS
@@ -150,7 +179,7 @@ export async function PUT(
       const existsResult = await executeQuery<{ count: number }>(existsQuery, { newUserId });
       if (existsResult.rows[0].count > 0) {
         return NextResponse.json(
-          { error: 'USER_ID already exists' },
+          { error: 'معرف المستخدم موجود بالفعل' },
           { status: 409 }
         );
       }
@@ -170,40 +199,208 @@ export async function PUT(
     const updateParams: any = { effectiveUserId };
 
     if (username !== undefined) {
+      if (typeof username !== 'string') {
+        return NextResponse.json(
+          { error: 'اسم المستخدم يجب أن يكون نص' },
+          { status: 400 }
+        );
+      }
+      
+      username = sanitizeInput(username.trim());
+      if (username === '') {
+        return NextResponse.json(
+          { error: 'اسم المستخدم لا يمكن أن يكون فارغاً' },
+          { status: 400 }
+        );
+      }
+
+      if (username.length > 100) {
+        return NextResponse.json(
+          { error: 'اسم المستخدم طويل جداً (الحد الأقصى 100 حرف)' },
+          { status: 400 }
+        );
+      }
+
+      if (!isValidText(username)) {
+        return NextResponse.json(
+          { error: 'اسم المستخدم يحتوي على أحرف غير مسموح بها' },
+          { status: 400 }
+        );
+      }
+
       updateFields.push('USERNAME = :username');
       updateParams.username = username;
     }
+    
     if (email !== undefined) {
+      if (typeof email !== 'string') {
+        return NextResponse.json(
+          { error: 'البريد الإلكتروني يجب أن يكون نص' },
+          { status: 400 }
+        );
+      }
+      
+      email = sanitizeInput(email.trim().toLowerCase());
+      if (email === '') {
+        return NextResponse.json(
+          { error: 'البريد الإلكتروني لا يمكن أن يكون فارغاً' },
+          { status: 400 }
+        );
+      }
+
+      if (!isValidEmail(email)) {
+        return NextResponse.json(
+          { error: 'البريد الإلكتروني غير صحيح' },
+          { status: 400 }
+        );
+      }
+
+      if (email.length > 255) {
+        return NextResponse.json(
+          { error: 'البريد الإلكتروني طويل جداً (الحد الأقصى 255 حرف)' },
+          { status: 400 }
+        );
+      }
+
       updateFields.push('EMAIL = :email');
       updateParams.email = email;
     }
+    
     if (fullName !== undefined) {
+      if (typeof fullName !== 'string') {
+        return NextResponse.json(
+          { error: 'الاسم الكامل يجب أن يكون نص' },
+          { status: 400 }
+        );
+      }
+      
+      fullName = sanitizeInput(fullName.trim());
+      if (fullName === '') {
+        return NextResponse.json(
+          { error: 'الاسم الكامل لا يمكن أن يكون فارغاً' },
+          { status: 400 }
+        );
+      }
+
+      if (fullName.length > 200) {
+        return NextResponse.json(
+          { error: 'الاسم الكامل طويل جداً (الحد الأقصى 200 حرف)' },
+          { status: 400 }
+        );
+      }
+
+      if (!isValidText(fullName)) {
+        return NextResponse.json(
+          { error: 'الاسم الكامل يحتوي على أحرف غير مسموح بها' },
+          { status: 400 }
+        );
+      }
+
       updateFields.push('FULL_NAME = :fullName');
       updateParams.fullName = fullName;
     }
+    
     if (roleId !== undefined) {
+      const roleIdNum = typeof roleId === 'string' ? parseInt(roleId) : Number(roleId);
+      if (isNaN(roleIdNum) || roleIdNum <= 0) {
+        return NextResponse.json(
+          { error: 'الدور غير صحيح' },
+          { status: 400 }
+        );
+      }
       updateFields.push('ROLE_ID = :roleId');
-      updateParams.roleId = roleId;
+      updateParams.roleId = roleIdNum;
     }
+    
     if (phone !== undefined) {
-      updateFields.push('PHONE = :phone');
-      updateParams.phone = phone || null;
+      if (phone === null || phone === '') {
+        updateFields.push('PHONE = :phone');
+        updateParams.phone = null;
+      } else if (typeof phone === 'string') {
+        phone = sanitizeInput(phone.trim());
+        if (phone.length > 50) {
+          return NextResponse.json(
+            { error: 'رقم الهاتف طويل جداً (الحد الأقصى 50 حرف)' },
+            { status: 400 }
+          );
+        }
+        updateFields.push('PHONE = :phone');
+        updateParams.phone = phone;
+      } else {
+        return NextResponse.json(
+          { error: 'رقم الهاتف يجب أن يكون نص' },
+          { status: 400 }
+        );
+      }
     }
+    
     if (deptId !== undefined) {
-      updateFields.push('DEPT_ID = :deptId');
-      updateParams.deptId = deptId || null;
+      if (deptId === null || deptId === '') {
+        updateFields.push('DEPT_ID = :deptId');
+        updateParams.deptId = null;
+      } else {
+        const deptIdNum = typeof deptId === 'string' ? parseInt(deptId) : Number(deptId);
+        if (isNaN(deptIdNum) || deptIdNum <= 0) {
+          return NextResponse.json(
+            { error: 'معرف القسم غير صحيح' },
+            { status: 400 }
+          );
+        }
+        updateFields.push('DEPT_ID = :deptId');
+        updateParams.deptId = deptIdNum;
+      }
     }
+    
     if (rankId !== undefined) {
-      updateFields.push('RANK_ID = :rankId');
-      updateParams.rankId = rankId || null;
+      if (rankId === null || rankId === '') {
+        updateFields.push('RANK_ID = :rankId');
+        updateParams.rankId = null;
+      } else {
+        const rankIdNum = typeof rankId === 'string' ? parseInt(rankId) : Number(rankId);
+        if (isNaN(rankIdNum) || rankIdNum <= 0) {
+          return NextResponse.json(
+            { error: 'معرف الرتبة غير صحيح' },
+            { status: 400 }
+          );
+        }
+        updateFields.push('RANK_ID = :rankId');
+        updateParams.rankId = rankIdNum;
+      }
     }
+    
     if (floorId !== undefined) {
-      updateFields.push('FLOOR_ID = :floorId');
-      updateParams.floorId = floorId || null;
+      if (floorId === null || floorId === '') {
+        updateFields.push('FLOOR_ID = :floorId');
+        updateParams.floorId = null;
+      } else {
+        const floorIdNum = typeof floorId === 'string' ? parseInt(floorId) : Number(floorId);
+        if (isNaN(floorIdNum) || floorIdNum <= 0) {
+          return NextResponse.json(
+            { error: 'معرف الطابق غير صحيح' },
+            { status: 400 }
+          );
+        }
+        updateFields.push('FLOOR_ID = :floorId');
+        updateParams.floorId = floorIdNum;
+      }
     }
+    
     if (isActive !== undefined) {
+      if (typeof isActive !== 'number' && typeof isActive !== 'string') {
+        return NextResponse.json(
+          { error: 'الحالة غير صحيحة' },
+          { status: 400 }
+        );
+      }
+      const isActiveNum = Number(isActive);
+      if (isActiveNum !== 0 && isActiveNum !== 1) {
+        return NextResponse.json(
+          { error: 'الحالة يجب أن تكون 0 أو 1' },
+          { status: 400 }
+        );
+      }
       updateFields.push('IS_ACTIVE = :isActive');
-      updateParams.isActive = isActive;
+      updateParams.isActive = isActiveNum;
     }
 
     if (updateFields.length === 0) {
@@ -348,12 +545,15 @@ export async function DELETE(
     if (authCheck) return authCheck;
 
     const { id } = await params;
-
-    if (!id || isNaN(Number(id))) {
-      return NextResponse.json({ error: 'Missing user ID' }, { status: 400 });
-    }
-    
     const userId = parseInt(id);
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(userId) || userId <= 0) {
+      return NextResponse.json(
+        { error: 'معرف المستخدم غير صحيح' },
+        { status: 400 }
+      );
+    }
 
     const query = `DELETE FROM far3.USERS WHERE USER_ID = :userId`;
 

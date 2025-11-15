@@ -115,7 +115,9 @@ export default function UsersPageContent() {
             setRoles(Array.from(uniqueRoles.values()));
           }
         } else if (usersResult.error) {
-          showNotification('error', usersResult.error);
+          // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
+          const errorMessage = typeof usersResult.error === 'string' ? usersResult.error : 'فشل في جلب المستخدمين';
+          showNotification('error', errorMessage);
         } else {
           console.error('Unexpected users response format:', usersResult);
         }
@@ -290,7 +292,8 @@ export default function UsersPageContent() {
           fetchData();
           handleCloseModal();
         } else {
-          const errorMsg = result.error || 'حدث خطأ';
+          // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
+          const errorMsg = typeof result.error === 'string' ? result.error : 'حدث خطأ';
           setUserError(errorMsg);
           showNotification('error', errorMsg);
         }
@@ -334,7 +337,8 @@ export default function UsersPageContent() {
           fetchData();
           handleCloseModal();
         } else {
-          const errorMsg = result.error || 'حدث خطأ';
+          // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
+          const errorMsg = typeof result.error === 'string' ? result.error : 'حدث خطأ';
           setUserError(errorMsg);
           showNotification('error', errorMsg);
         }
@@ -361,7 +365,9 @@ export default function UsersPageContent() {
         showNotification('success', 'تم الحذف بنجاح');
         fetchData();
       } else {
-        showNotification('error', result.error || 'فشل في الحذف');
+        // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
+        const errorMsg = typeof result.error === 'string' ? result.error : 'فشل في الحذف';
+        showNotification('error', errorMsg);
       }
     } catch (error) {
       showNotification('error', 'فشل في حذف المستخدم');

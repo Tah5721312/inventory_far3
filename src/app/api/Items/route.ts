@@ -51,11 +51,11 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Error in GET /api/items:', error);
     
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
       { 
         success: false, 
-        error: 'فشل في جلب البيانات',
-        details: error?.message || 'Unknown error'
+        error: 'فشل في جلب البيانات'
       },
       { status: 500 }
     );
@@ -97,11 +97,11 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Error in POST /api/items:', error);
     
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
       { 
         success: false, 
-        error: 'فشل في إضافة الصنف',
-        details: error?.message || 'Unknown error'
+        error: 'فشل في إضافة الصنف'
       },
       { status: 500 }
     );
@@ -144,11 +144,11 @@ export async function PUT(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Error in PUT /api/items:', error);
     
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
       { 
         success: false, 
-        error: 'فشل في تحديث الصنف',
-        details: error?.message || 'Unknown error'
+        error: 'فشل في تحديث الصنف'
       },
       { status: 500 }
     );
@@ -189,11 +189,11 @@ export async function DELETE(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Error in DELETE /api/items:', error);
     
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
       { 
         success: false, 
-        error: 'فشل في حذف الصنف',
-        details: error?.message || 'Unknown error'
+        error: 'فشل في حذف الصنف'
       },
       { status: 500 }
     );

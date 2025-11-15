@@ -5,6 +5,7 @@ import {
   getAllSubCategories,
   createSubCategory,
 } from '@/lib/db_utils';
+import { sanitizeInput, isValidText } from '@/lib/security';
 
 // GET: جلب جميع التصنيفات الفرعية
 export async function GET() {
@@ -18,8 +19,9 @@ export async function GET() {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error fetching sub categories:', errorMessage);
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
-      { success: false, error: 'فشل في جلب التصنيفات الفرعية', details: errorMessage },
+      { success: false, error: 'فشل في جلب التصنيفات الفرعية' },
       { status: 500 }
     );
   }
@@ -33,26 +35,69 @@ export async function POST(request: NextRequest) {
     if (authCheck) return authCheck;
 
     const body = await request.json();
-    const { SUB_CAT_NAME, CAT_ID, DESCRIPTION } = body;
+    let { SUB_CAT_NAME, DESCRIPTION } = body;
+    const { CAT_ID } = body;
 
-    if (!SUB_CAT_NAME || SUB_CAT_NAME.trim() === '') {
+    // التحقق من وجود البيانات
+    if (!SUB_CAT_NAME || typeof SUB_CAT_NAME !== 'string') {
       return NextResponse.json(
         { success: false, error: 'اسم التصنيف الفرعي مطلوب' },
         { status: 400 }
       );
     }
 
-    if (!CAT_ID || isNaN(CAT_ID)) {
+    // Sanitize و validate input
+    SUB_CAT_NAME = sanitizeInput(SUB_CAT_NAME.trim());
+    
+    if (SUB_CAT_NAME === '') {
       return NextResponse.json(
-        { success: false, error: 'التصنيف الرئيسي مطلوب' },
+        { success: false, error: 'اسم التصنيف الفرعي مطلوب' },
         { status: 400 }
       );
     }
 
+    // التحقق من طول الاسم
+    if (SUB_CAT_NAME.length > 200) {
+      return NextResponse.json(
+        { success: false, error: 'اسم التصنيف الفرعي طويل جداً (الحد الأقصى 200 حرف)' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من محتوى الاسم (منع HTML/Script tags)
+    if (!isValidText(SUB_CAT_NAME)) {
+      return NextResponse.json(
+        { success: false, error: 'اسم التصنيف الفرعي يحتوي على أحرف غير مسموح بها' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من CAT_ID
+    const catIdNum = typeof CAT_ID === 'string' ? parseInt(CAT_ID) : Number(CAT_ID);
+    if (!CAT_ID || isNaN(catIdNum) || catIdNum <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'التصنيف الرئيسي مطلوب وصحيح' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize الوصف (اختياري)
+    if (DESCRIPTION && typeof DESCRIPTION === 'string') {
+      DESCRIPTION = sanitizeInput(DESCRIPTION.trim());
+      if (DESCRIPTION.length > 1000) {
+        return NextResponse.json(
+          { success: false, error: 'الوصف طويل جداً (الحد الأقصى 1000 حرف)' },
+          { status: 400 }
+        );
+      }
+    } else {
+      DESCRIPTION = undefined;
+    }
+
     const newSubCatId = await createSubCategory({
-      SUB_CAT_NAME: SUB_CAT_NAME.trim(),
-      CAT_ID: parseInt(CAT_ID),
-      DESCRIPTION: DESCRIPTION?.trim() || undefined,
+      SUB_CAT_NAME,
+      CAT_ID: catIdNum,
+      DESCRIPTION,
     });
 
     return NextResponse.json(
@@ -60,9 +105,9 @@ export async function POST(request: NextRequest) {
         success: true,
         data: {
           SUB_CAT_ID: newSubCatId,
-          SUB_CAT_NAME: SUB_CAT_NAME.trim(),
-          CAT_ID: parseInt(CAT_ID),
-          DESCRIPTION: DESCRIPTION?.trim() || null,
+          SUB_CAT_NAME,
+          CAT_ID: catIdNum,
+          DESCRIPTION: DESCRIPTION || null,
         },
       },
       { status: 201 }
@@ -80,8 +125,9 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
-      { success: false, error: 'فشل في إضافة التصنيف الفرعي', details: errorMessage },
+      { success: false, error: 'فشل في إضافة التصنيف الفرعي' },
       { status: 500 }
     );
   }

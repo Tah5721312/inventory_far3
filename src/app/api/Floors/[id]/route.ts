@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helper';
 import { getFloorById, updateFloor, deleteFloor } from '@/lib/db_utils';
+import { sanitizeInput, isValidText } from '@/lib/security';
 
 export async function GET(
   request: NextRequest,
@@ -14,6 +15,15 @@ export async function GET(
 
     const { id: idString } = await params;
     const id = parseInt(idString);
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(id) || id <= 0) {
+      return NextResponse.json(
+        { error: 'معرف الطابق غير صحيح' },
+        { status: 400 }
+      );
+    }
+    
     const floor = await getFloorById(id);
     
     if (!floor) {
@@ -44,17 +54,53 @@ export async function PUT(
 
     const { id: idString } = await params;
     const id = parseInt(idString);
-    const body = await request.json();
-    const { FLOOR_NAME } = body;
-
-    if (!FLOOR_NAME || FLOOR_NAME.trim() === '') {
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(id) || id <= 0) {
       return NextResponse.json(
-        { error: 'اسم الطابق مطلوب' },
+        { success: false, error: 'معرف الطابق غير صحيح' },
         { status: 400 }
       );
     }
 
-    const rowsAffected = await updateFloor(id, { FLOOR_NAME: FLOOR_NAME.trim() });
+    const body = await request.json();
+    let { FLOOR_NAME } = body;
+
+    // التحقق من وجود الاسم
+    if (!FLOOR_NAME || typeof FLOOR_NAME !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'اسم الطابق مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize و validate input
+    FLOOR_NAME = sanitizeInput(FLOOR_NAME.trim());
+    
+    if (FLOOR_NAME === '') {
+      return NextResponse.json(
+        { success: false, error: 'اسم الطابق مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من طول الاسم
+    if (FLOOR_NAME.length > 200) {
+      return NextResponse.json(
+        { success: false, error: 'اسم الطابق طويل جداً (الحد الأقصى 200 حرف)' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من محتوى الاسم
+    if (!isValidText(FLOOR_NAME)) {
+      return NextResponse.json(
+        { success: false, error: 'اسم الطابق يحتوي على أحرف غير مسموح بها' },
+        { status: 400 }
+      );
+    }
+
+    const rowsAffected = await updateFloor(id, { FLOOR_NAME });
     
     if (rowsAffected > 0) {
       return NextResponse.json(
@@ -80,8 +126,9 @@ export async function PUT(
       );
     }
     
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
-      { success: false, error: 'فشل في تحديث الطابق', details: errorMessage },
+      { success: false, error: 'فشل في تحديث الطابق' },
       { status: 500 }
     );
   }
@@ -98,6 +145,15 @@ export async function DELETE(
 
     const { id: idString } = await params;
     const id = parseInt(idString);
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(id) || id <= 0) {
+      return NextResponse.json(
+        { error: 'معرف الطابق غير صحيح' },
+        { status: 400 }
+      );
+    }
+    
     const rowsAffected = await deleteFloor(id);
     
     if (rowsAffected > 0) {

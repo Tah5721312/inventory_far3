@@ -16,15 +16,14 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('❌ Error in GET /api/statistics:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('❌ Error in GET /api/statistics:', errorMessage);
     
-    const errorMessage = error?.message || error?.name || 'Unknown error';
-    
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
       { 
         success: false, 
-        error: 'فشل في جلب الإحصائيات',
-        details: errorMessage
+        error: 'فشل في جلب الإحصائيات'
       },
       { status: 500 }
     );

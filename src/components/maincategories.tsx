@@ -92,7 +92,9 @@ const [formData, setFormData] = useState({ CAT_NAME: '', DESCRIPTION: '' });
         fetchCategories();
         handleCloseModal();
       } else {
-        showNotification('error', result.error || 'حدث خطأ');
+        // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
+        const errorMessage = typeof result.error === 'string' ? result.error : 'حدث خطأ';
+        showNotification('error', errorMessage);
       }
     } catch (error) {
       showNotification('error', 'فشل في حفظ البيانات');
@@ -114,7 +116,9 @@ const [formData, setFormData] = useState({ CAT_NAME: '', DESCRIPTION: '' });
         showNotification('success', 'تم الحذف بنجاح');
         fetchCategories();
       } else {
-        showNotification('error', result.error || 'فشل في الحذف');
+        // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
+        const errorMessage = typeof result.error === 'string' ? result.error : 'فشل في الحذف';
+        showNotification('error', errorMessage);
       }
     } catch (error) {
       showNotification('error', 'فشل في حذف التصنيف');

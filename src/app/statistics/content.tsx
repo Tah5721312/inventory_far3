@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Printer, BarChart3, RefreshCw, ArrowRight, Home, FileText } from 'lucide-react';
 import Link from 'next/link';
+import { escapeHtml } from '@/lib/security';
 
 interface Statistics {
   mainCategories: Array<{ CAT_ID: number; CAT_NAME: string; ITEM_COUNT: number }>;
@@ -40,7 +41,9 @@ export default function StatisticsPageContent() {
       if (data.success) {
         setStatistics(data.data);
       } else {
-        setError(data.error || 'فشل في جلب الإحصائيات');
+        // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
+        const errorMessage = typeof data.error === 'string' ? data.error : 'فشل في جلب الإحصائيات';
+        setError(errorMessage);
       }
     } catch (err) {
       console.error('Error fetching statistics:', err);
@@ -62,7 +65,8 @@ export default function StatisticsPageContent() {
   const handleExportMainCategoriesPDF = () => {
     if (!statistics) return;
 
-    // الحصول على URL الصورة (استخدام الصورة الموجودة أو placeholder)
+    // الحصول على URL الصورة (آمن - window.location.origin لا يمكن تلاعبه)
+    // ✅ window.location.origin آمن لأنه لا يحتوي على أحرف خطيرة في HTML attributes
     const logoUrl = window.location.origin + '/EDARA_LOGO.png';
     
     // تحويل الأرقام إلى الأرقام العربية
@@ -249,7 +253,7 @@ export default function StatisticsPageContent() {
             <!-- Header -->
             <div class="header">
              <div class="logo">
-                <img src="${logoUrl}" alt="شعار" onerror="this.style.display='none'; this.parentElement.innerHTML='[شعار]';" />
+                <img src="${logoUrl}" alt="شعار" onerror="this.style.display='none'; this.nextElementSibling ? this.nextElementSibling.textContent = '[شعار]' : this.parentElement.appendChild(document.createTextNode('[شعار]'));" />
               </div>
               <div class="header-content">
                 <div class="header-text">هيئة الشؤون المالية للقوات المسلحة</div>
@@ -280,7 +284,7 @@ export default function StatisticsPageContent() {
               <tbody>
                 ${statistics.mainCategories.map(cat => `
                   <tr>
-                  <td>${cat.CAT_NAME}</td>
+                  <td>${escapeHtml(cat.CAT_NAME)}</td>
                   <td>${toArabicNum(cat.ITEM_COUNT)}</td>
                   <td></td>
                   </tr>

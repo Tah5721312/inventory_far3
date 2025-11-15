@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helper';
 import { getDepartmentById, updateDepartment, deleteDepartment } from '@/lib/db_utils';
+import { sanitizeInput, isValidText } from '@/lib/security';
 
 export async function GET(
   request: NextRequest,
@@ -15,6 +16,15 @@ export async function GET(
 
     const { id: idString } = await params;
     const id = parseInt(idString);
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(id) || id <= 0) {
+      return NextResponse.json(
+        { error: 'معرف القسم غير صحيح' },
+        { status: 400 }
+      );
+    }
+    
     const department = await getDepartmentById(id);
     
     if (!department) {
@@ -45,17 +55,53 @@ export async function PUT(
 
     const { id: idString } = await params;
     const id = parseInt(idString);
-    const body = await request.json();
-    const { DEPT_NAME } = body;
-
-    if (!DEPT_NAME || DEPT_NAME.trim() === '') {
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(id) || id <= 0) {
       return NextResponse.json(
-        { error: 'اسم القسم مطلوب' },
+        { success: false, error: 'معرف القسم غير صحيح' },
         { status: 400 }
       );
     }
 
-    const rowsAffected = await updateDepartment(id, { DEPT_NAME: DEPT_NAME.trim() });
+    const body = await request.json();
+    let { DEPT_NAME } = body;
+
+    // التحقق من وجود الاسم
+    if (!DEPT_NAME || typeof DEPT_NAME !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'اسم القسم مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize و validate input
+    DEPT_NAME = sanitizeInput(DEPT_NAME.trim());
+    
+    if (DEPT_NAME === '') {
+      return NextResponse.json(
+        { success: false, error: 'اسم القسم مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من طول الاسم
+    if (DEPT_NAME.length > 200) {
+      return NextResponse.json(
+        { success: false, error: 'اسم القسم طويل جداً (الحد الأقصى 200 حرف)' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من محتوى الاسم
+    if (!isValidText(DEPT_NAME)) {
+      return NextResponse.json(
+        { success: false, error: 'اسم القسم يحتوي على أحرف غير مسموح بها' },
+        { status: 400 }
+      );
+    }
+
+    const rowsAffected = await updateDepartment(id, { DEPT_NAME });
     
     if (rowsAffected > 0) {
       return NextResponse.json(
@@ -81,8 +127,9 @@ export async function PUT(
       );
     }
     
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
-      { success: false, error: 'فشل في تحديث القسم', details: errorMessage },
+      { success: false, error: 'فشل في تحديث القسم' },
       { status: 500 }
     );
   }
@@ -99,6 +146,15 @@ export async function DELETE(
 
     const { id: idString } = await params;
     const id = parseInt(idString);
+    
+    // ✅ التحقق من صحة ID
+    if (isNaN(id) || id <= 0) {
+      return NextResponse.json(
+        { error: 'معرف القسم غير صحيح' },
+        { status: 400 }
+      );
+    }
+    
     const rowsAffected = await deleteDepartment(id);
     
     if (rowsAffected > 0) {

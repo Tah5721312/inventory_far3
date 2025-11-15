@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helper';
 import { getAllRanks, createRank } from '@/lib/db_utils';
+import { sanitizeInput, isValidText } from '@/lib/security';
 
 export async function GET() {
   try {
@@ -14,8 +15,9 @@ export async function GET() {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error fetching ranks:', errorMessage);
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
-      { success: false, error: 'فشل في جلب الرتب', details: errorMessage },
+      { success: false, error: 'فشل في جلب الرتب' },
       { status: 500 }
     );
   }
@@ -28,16 +30,43 @@ export async function POST(request: NextRequest) {
     if (authCheck) return authCheck;
 
     const body = await request.json();
-    const { RANK_NAME } = body;
+    let { RANK_NAME } = body;
 
-    if (!RANK_NAME || RANK_NAME.trim() === '') {
+    // التحقق من وجود البيانات
+    if (!RANK_NAME || typeof RANK_NAME !== 'string') {
       return NextResponse.json(
         { success: false, error: 'اسم الرتبة مطلوب' },
         { status: 400 }
       );
     }
 
-    const newId = await createRank({ RANK_NAME: RANK_NAME.trim() });
+    // Sanitize و validate input
+    RANK_NAME = sanitizeInput(RANK_NAME.trim());
+    
+    if (RANK_NAME === '') {
+      return NextResponse.json(
+        { success: false, error: 'اسم الرتبة مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من طول الاسم
+    if (RANK_NAME.length > 200) {
+      return NextResponse.json(
+        { success: false, error: 'اسم الرتبة طويل جداً (الحد الأقصى 200 حرف)' },
+        { status: 400 }
+      );
+    }
+
+    // التحقق من محتوى الاسم (منع HTML/Script tags)
+    if (!isValidText(RANK_NAME)) {
+      return NextResponse.json(
+        { success: false, error: 'اسم الرتبة يحتوي على أحرف غير مسموح بها' },
+        { status: 400 }
+      );
+    }
+
+    const newId = await createRank({ RANK_NAME });
     return NextResponse.json(
       { success: true, message: 'تم إنشاء الرتبة بنجاح', id: newId },
       { status: 201 }
@@ -55,8 +84,9 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // ❌ لا نرسل تفاصيل الخطأ للعميل (Information Disclosure)
     return NextResponse.json(
-      { success: false, error: 'فشل في إنشاء الرتبة', details: errorMessage },
+      { success: false, error: 'فشل في إنشاء الرتبة' },
       { status: 500 }
     );
   }
