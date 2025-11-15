@@ -1,133 +1,372 @@
-# Next.js + Tailwind CSS + TypeScript Starter and Boilerplate
+# نظام إدارة المخزون والمعدات
 
 <div align="center">
-  <h2>🔋 ts-nextjs-tailwind-starter</h2>
-  <p>Next.js + Tailwind CSS + TypeScript starter packed with useful development features.</p>
-  <p>Made by <a href="https://theodorusclarence.com">Theodorus Clarence</a></p>
-
-[![GitHub Repo stars](https://img.shields.io/github/stars/theodorusclarence/ts-nextjs-tailwind-starter)](https://github.com/theodorusclarence/ts-nextjs-tailwind-starter/stargazers)
-[![Depfu](https://badges.depfu.com/badges/fc6e730632ab9dacaf7df478a08684a7/overview.svg)](https://depfu.com/github/theodorusclarence/ts-nextjs-tailwind-starter?project_id=30160)
-[![Last Update](https://img.shields.io/badge/deps%20update-every%20sunday-blue.svg)](https://shields.io/)
-
+  <h2>📦 نظام إدارة المخزون والمعدات</h2>
+  <p>نظام شامل لإدارة وتتبع الأجهزة والمعدات في المؤسسات</p>
+  
+  [![Next.js](https://img.shields.io/badge/Next.js-15.4-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.1-38bdf8?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+  [![React](https://img.shields.io/badge/React-19.0-61dafb?style=for-the-badge&logo=react)](https://reactjs.org/)
 </div>
 
-## Features
+## 📋 نظرة عامة
 
-This repository is 🔋 battery packed with:
+نظام إدارة المخزون والمعدات هو تطبيق ويب شامل تم تطويره باستخدام أحدث التقنيات لتسهيل إدارة وتتبع الأجهزة والمعدات في المؤسسات. يوفر النظام واجهة سهلة الاستخدام مع إمكانيات متقدمة للتصنيف والتتبع والتقارير.
 
-- ⚡️ Next.js 14 with App Router
-- ⚛️ React 18
-- ✨ TypeScript
-- 💨 Tailwind CSS 3 — Configured with CSS Variables to extend the **primary** color
-- 💎 Pre-built Components — Components that will **automatically adapt** with your brand color, [check here for the demo](https://tsnext-tw.thcl.dev/components)
-- 🃏 Jest — Configured for unit testing
-- 📈 Absolute Import and Path Alias — Import components using `@/` prefix
-- 📏 ESLint — Find and fix problems in your code, also will **auto sort** your imports
-- 💖 Prettier — Format your code consistently
-- 🐶 Husky & Lint Staged — Run scripts on your staged files before they are committed
-- 🤖 Conventional Commit Lint — Make sure you & your teammates follow conventional commit
-- ⏰ Release Please — Generate your changelog by activating the `release-please` workflow
-- 👷 Github Actions — Lint your code on PR
-- 🚘 Automatic Branch and Issue Autolink — Branch will be automatically created on issue **assign**, and auto linked on PR
-- 🔥 Snippets — A collection of useful snippets
-- 👀 Open Graph Helper Function — Awesome open graph generated using [og](https://github.com/theodorusclarence/og), fork it and deploy!
-- 🗺 Site Map — Automatically generate sitemap.xml
-- 📦 Expansion Pack — Easily install common libraries, additional components, and configs.
+## ✨ المميزات الرئيسية
 
-See the 👉 [feature details and changelog](https://github.com/theodorusclarence/ts-nextjs-tailwind-starter/blob/main/CHANGELOG.md) 👈 for more.
+### 🔐 الأمان والمصادقة
 
-You can also check all of the **details and demos** on my blog post:
+- نظام مصادقة آمن باستخدام NextAuth.js
+- إدارة صلاحيات متقدمة باستخدام CASL (Ability-based access control)
+- حماية المسارات والموارد بناءً على الأدوار
+- تسجيل خروج تلقائي بعد فترة من عدم النشاط
 
-- [One-stop Starter to Maximize Efficiency on Next.js & Tailwind CSS Projects](https://theodorusclarence.com/blog/one-stop-starter)
+### 📦 إدارة الأصناف
 
-## Getting Started
+- **إدارة شاملة للأصناف**: إضافة، تعديل، حذف، وعرض جميع الأصناف
+- **تصنيف هرمي متعدد المستويات**:
+  - التصنيفات الرئيسية
+  - التصنيفات الفرعية
+  - أنواع الأصناف
+- **فلاتر متقدمة**:
+  - فلترة حسب التصنيف الرئيسي والفرعي
+  - فلترة حسب نوع الصنف
+  - فلترة حسب رقم السريال
+  - فلترة حسب الاسم
+  - فلترة حسب القسم والمستخدم
+  - فلترة حسب IP واسم الجهاز
+- **ترتيب ديناميكي**: إمكانية ترتيب الأصناف حسب الأعمدة المختلفة
+- **تصدير PDF**: إنشاء تقارير PDF منظمة بتنسيق احترافي
 
-### 1. Clone this template using one of the three ways
+### 👥 إدارة المستخدمين
 
-1. Use this repository as template
+- إدارة كاملة للمستخدمين والأدوار
+- نظام صلاحيات مرن
+- إعادة تعيين كلمات المرور
+- ملفات تعريف المستخدمين
 
-   **Disclosure:** by using this repository as a template, there will be an attribution on your repository.
+### 📊 الإحصائيات والتقارير
 
-   I'll appreciate if you do, so this template can be known by others too 😄
+- **لوحة إحصائيات شاملة**:
+  - إحصائيات التصنيفات الرئيسية والفرعية
+  - إحصائيات أنواع الأصناف
+  - إحصائيات الأقسام والطوابق
+  - إحصائيات الحالات والأنواع
+  - إحصائيات المستخدمين والمخازن
+- **تقارير PDF**:
+  - تقارير التصنيفات الرئيسية بتنسيق رسمي
+  - تقارير الأصناف مع جدولة هرمية متقدمة
 
-   ![Use as template](https://user-images.githubusercontent.com/55318172/129183039-1a61e68d-dd90-4548-9489-7b3ccbb35810.png)
+### 🏢 إدارة التنظيم
 
-2. Using `create-next-app`
+- إدارة الأقسام (Departments)
+- إدارة الطوابق (Floors)
+- ربط الأصناف بالمواقع
 
-   ```bash
-   pnpm create next-app  -e https://github.com/theodorusclarence/ts-nextjs-tailwind-starter ts-pnpm
-   ```
+## 📸 لقطات من النظام
 
-   If you still want to use **pages directory** (_is not actively maintained_) you can use this command
+### الصفحة الرئيسية
 
-   ```bash
-   npx create-next-app -e https://github.com/theodorusclarence/ts-nextjs-tailwind-starter/tree/pages-directory project-name
-   ```
+![الصفحة الرئيسية](./public/images/read-md/1.png)
 
-3. Using `degit`
+### إدارة الأصناف
 
-   ```bash
-   npx degit theodorusclarence/ts-nextjs-tailwind-starter YOUR_APP_NAME
-   ```
+![إدارة الأصناف](./public/images/read-md/2.png)
 
-4. Deploy to Vercel
+### الفلاتر والبحث
 
-   [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https%3A%2F%2Fgithub.com%2Ftheodorusclarence%2Fts-nextjs-tailwind-starter)
+![الفلاتر والبحث](./public/images/read-md/3.png)
 
-### 2. Install dependencies
+### الإحصائيات
 
-It is encouraged to use **pnpm** so the husky hooks can work properly.
+![الإحصائيات](./public/images/read-md/4.png)
 
-```bash
-pnpm install
+### إدارة المستخدمين
+
+![إدارة المستخدمين](./public/images/read-md/5.png)
+
+### الملف الشخصي
+
+![الملف الشخصي](./public/images/read-md/6.png)
+
+### تقارير PDF
+
+![تقارير PDF](./public/images/read-md/7.png)
+
+### عرض الأصناف
+
+![عرض الأصناف](./public/images/read-md/8.png)
+
+### إحصائيات تفصيلية
+
+![إحصائيات تفصيلية](./public/images/read-md/9.png)
+
+### واجهة متجاوبة
+
+![واجهة متجاوبة](./public/images/read-md/10.png)
+
+### طباعة التقارير
+
+![طباعة التقارير](./public/images/read-md/11.png)
+
+## 🛠️ التقنيات المستخدمة
+
+### Frontend
+
+- **Next.js 15.4.3** - إطار عمل React مع App Router
+- **React 19.1.0** - مكتبة واجهة المستخدم
+- **TypeScript 5.8.3** - للكتابة الآمنة والموثوقة
+- **Tailwind CSS 4.1.11** - لأسلوب تصميم حديث وسريع
+- **Lucide React** - مجموعة رموز جميلة وعصرية
+
+### Backend & Database
+
+- **Oracle Database** - قاعدة بيانات قوية وموثوقة
+- **Next.js API Routes** - واجهة برمجة التطبيقات
+- **oracledb 6.10.0** - محرك قاعدة بيانات Oracle
+
+### Authentication & Authorization
+
+- **NextAuth.js 5.0** - نظام مصادقة شامل
+- **CASL (@casl/ability)** - إدارة الصلاحيات المرنة
+- **bcryptjs** - تشفير كلمات المرور
+
+### Additional Libraries
+
+- **Zod** - التحقق من صحة البيانات
+- **Axios** - طلبات HTTP
+- **React Toastify** - إشعارات المستخدم
+
+## 📁 هيكل المشروع
+
+```
+inventory/
+├── src/
+│   ├── app/                    # صفحات Next.js (App Router)
+│   │   ├── (user)/            # صفحات المستخدمين (مجموعة محمية)
+│   │   │   ├── login/         # صفحة تسجيل الدخول
+│   │   │   ├── register/      # صفحة التسجيل
+│   │   │   └── profile/       # صفحة الملف الشخصي
+│   │   ├── api/               # API Routes
+│   │   │   ├── items/         # واجهات إدارة الأصناف
+│   │   │   ├── users/         # واجهات إدارة المستخدمين
+│   │   │   ├── statistics/    # واجهات الإحصائيات
+│   │   │   └── ...
+│   │   ├── items/             # صفحة عرض الأصناف
+│   │   ├── statistics/        # صفحة الإحصائيات
+│   │   └── ...
+│   ├── components/            # المكونات القابلة لإعادة الاستخدام
+│   │   ├── Items.tsx         # مكون إدارة الأصناف
+│   │   ├── UserManagement.tsx # مكون إدارة المستخدمين
+│   │   └── ...
+│   ├── lib/                   # المكتبات والمساعدات
+│   │   ├── database.ts       # اتصال قاعدة البيانات
+│   │   ├── db_utils.ts       # دوال قاعدة البيانات
+│   │   ├── ability.ts        # إعداد CASL
+│   │   ├── roleManager.ts    # إدارة الأدوار
+│   │   └── ...
+│   ├── contexts/              # React Contexts
+│   │   └── AbilityContext.tsx # سياق الصلاحيات
+│   └── hooks/                 # Custom Hooks
+│
+├── public/                    # الملفات الثابتة
+│   ├── images/               # الصور
+│   │   └── read-md/          # صور README
+│   └── ...
+│
+└── ...
 ```
 
-### 3. Run the development server
+## 🚀 البدء السريع
 
-You can start the server using this command:
+### المتطلبات الأساسية
+
+- **Node.js** 18.x أو أحدث
+- **pnpm** (مفضل) أو npm أو yarn
+- **Oracle Database** مع تفعيل Oracle Client
+- **Git**
+
+### التثبيت
+
+1. **استنساخ المشروع**
+
+   ```bash
+   git clone <repository-url>
+   cd inventory
+   ```
+
+2. **تثبيت الحزم**
+
+   ```bash
+   pnpm install
+   ```
+
+3. **إعداد متغيرات البيئة**
+
+   أنشئ ملف `.env.local` في جذر المشروع:
+
+   ```env
+   # Database Configuration
+   ORACLE_USER=your_username
+   ORACLE_PASSWORD=your_password
+   ORACLE_CONNECTION_STRING=your_connection_string
+
+   # NextAuth Configuration
+   NEXTAUTH_SECRET=your_secret_key_here
+   NEXTAUTH_URL=http://localhost:3000
+   AUTH_URL=http://localhost:3000
+
+   # Application Configuration
+   NODE_ENV=development
+   ```
+
+4. **تشغيل خادم التطوير**
+
+   ```bash
+   pnpm dev
+   ```
+
+5. **فتح المتصفح**
+
+   افتح [http://localhost:3000](http://localhost:3000) في المتصفح
+
+## 📝 سكريبتات متاحة
 
 ```bash
+# تشغيل خادم التطوير
 pnpm dev
+
+# بناء المشروع للإنتاج
+pnpm build
+
+# تشغيل النسخة المنتجة
+pnpm start
+
+# فحص الأخطاء البرمجية
+pnpm lint
+
+# إصلاح الأخطاء البرمجية تلقائياً
+pnpm lint:fix
+
+# فحص الأنواع
+pnpm typecheck
+
+# تشغيل الاختبارات
+pnpm test
+
+# تنسيق الكود
+pnpm format
+
+# فحص تنسيق الكود
+pnpm format:check
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result. You can start editing the page by modifying `src/pages/index.tsx`.
+## 🔧 الإعدادات
 
-### 4. Change defaults
+### إعداد قاعدة بيانات Oracle
 
-There are some things you need to change including title, urls, favicons, etc.
+1. تأكد من تثبيت Oracle Client على النظام
+2. قم بإعداد متغيرات البيئة في `.env.local`
+3. تأكد من أن معلومات الاتصال صحيحة
 
-Find all comments with !STARTERCONF, then follow the guide.
+### إعداد NextAuth
 
-Don't forget to change the package name in package.json
+1. قم بإنشاء `NEXTAUTH_SECRET` عشوائي:
+   ```bash
+   openssl rand -base64 32
+   ```
+2. ضع `NEXTAUTH_URL` و `AUTH_URL` حسب بيئة العمل
 
-### 5. Commit Message Convention
+### إعداد CASL (الصلاحيات)
 
-This starter is using [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/), it is mandatory to use it to commit changes.
+قم بتعديل ملفات الصلاحيات في `src/lib/ability.ts` و `src/lib/ability.server.ts` حسب احتياجات المشروع.
 
-## Projects using ts-nextjs-tailwind-starter
+## 🎨 الميزات المتقدمة
 
-<!--
-TEMPLATE
-- [sitename](https://sitelink.com) ([Source](https://github.com/githublink))
-- [sitename](https://sitelink.com)
--->
+### نظام الفلترة المتقدم
 
-- [theodorusclarence.com](https://theodorusclarence.com) ([Source](https://github.com/theodorusclarence/theodorusclarence.com))
-- [Notiolink](https://notiolink.thcl.dev/) ([Source](https://github.com/theodorusclarence/notiolink))
-- [NextJs + Materia UI + Typescript](https://github.com/AlexStack/nextjs-materia-mui-typescript-hook-form-scaffold-boilerplate-starter)
+النظام يدعم فلترة متعددة الأبعاد للأصناف مع دعم الفلاتر التابعة (dependent filters).
 
-Are you using this starter? Please add your page (and repo) to the end of the list via a [Pull Request](https://github.com/theodorusclarence/ts-nextjs-tailwind-starter/edit/main/README.md). 😃
+### التقارير الذكية
 
-## Expansion Pack 📦
+- تقارير PDF بتنسيق احترافي
+- جدولة هرمية متقدمة مع دعم `rowspan`
+- تصدير البيانات المنظمة
 
-This starter is now equipped with an [expansion pack](https://github.com/theodorusclarence/expansion-pack).
+### واجهة مستخدم حديثة
 
-You can easily add expansion such as React Hook Form + Components, Storybook, and more just using a single command line.
+- تصميم متجاوب (Responsive Design)
+- دعم الأجهزة المحمولة
+- واجهة مستخدم عصرية باستخدام Tailwind CSS
 
-<https://user-images.githubusercontent.com/55318172/146631994-e1cac137-1664-4cfe-950b-a96decc1eaa6.mp4>
+## 📖 الوثائق
 
-Check out the [expansion pack repository](https://github.com/theodorusclarence/expansion-pack) for the commands
+### الصفحات الرئيسية
 
-### App Router Update
+- `/items` - صفحة إدارة الأصناف
+- `/statistics` - صفحة الإحصائيات والتقارير
+- `/users` - صفحة إدارة المستخدمين
+- `/login` - صفحة تسجيل الدخول
 
-Due to App Router update, the expansion pack is currently **outdated**. It will be updated in the future. You can still use them by copy and pasting the files.
+### API Endpoints
+
+- `/api/items` - واجهات إدارة الأصناف
+- `/api/users` - واجهات إدارة المستخدمين
+- `/api/statistics` - واجهات الإحصائيات
+- `/api/auth/*` - واجهات المصادقة
+
+## 🧪 الاختبارات
+
+```bash
+# تشغيل جميع الاختبارات
+pnpm test
+
+# تشغيل الاختبارات في وضع المراقبة
+pnpm test:watch
+```
+
+## 📦 البناء للنشر
+
+```bash
+# بناء المشروع
+pnpm build
+
+# تشغيل النسخة المنتجة محلياً
+pnpm start
+```
+
+## 🤝 المساهمة
+
+1. قم بعمل Fork للمشروع
+2. أنشئ فرع للميزة (`git checkout -b feature/AmazingFeature`)
+3. قم بعمل Commit للتغييرات (`git commit -m 'Add some AmazingFeature'`)
+4. ادفع للفرع (`git push origin feature/AmazingFeature`)
+5. افتح Pull Request
+
+### معايير الكود
+
+- استخدم Conventional Commits
+- تأكد من تمرير جميع الاختبارات
+- تأكد من عدم وجود أخطاء في ESLint
+- اتبع معايير TypeScript
+
+## 📄 الترخيص
+
+هذا المشروع خاص.
+
+## 📞 التواصل
+
+للمزيد من المعلومات أو الدعم، يرجى فتح Issue في المستودع.
+
+## 🙏 شكر وتقدير
+
+شكراً لجميع المساهمين في هذا المشروع.
+
+---
+
+<div align="center">
+  <p>تم التطوير بـ ❤️ باستخدام Next.js و TypeScript</p>
+  <p>© 2025 نظام إدارة المخزون والمعدات</p>
+</div>

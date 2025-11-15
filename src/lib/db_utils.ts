@@ -7,10 +7,15 @@ import { Item, User, MainCategory, SubCategory, ItemType, Rank, Floor } from '@/
  */
 
 export async function getAllItems(filters?: {
+  catId?: number;
   subCatId?: number;
+  itemTypeId?: number;
   userId?: number;
   deptId?: number;
   serial?: string;
+  itemName?: string;
+  ip?: string;
+  compName?: string;
 }) {
   let query = `
     SELECT 
@@ -34,21 +39,46 @@ export async function getAllItems(filters?: {
   const params: oracledb.BindParameters = {};
   const where: string[] = [];
 
+  if (filters?.catId) {
+    where.push('mc.CAT_ID = :catId');
+    params.catId = filters.catId;
+  }
   if (filters?.subCatId) {
     where.push('i.SUB_CAT_ID = :subCatId');
     params.subCatId = filters.subCatId;
   }
-  if (filters?.userId) {
-    where.push('i.USER_ID = :userId');
-    params.userId = filters.userId;
+  if (filters?.itemTypeId) {
+    where.push('i.ITEM_TYPE_ID = :itemTypeId');
+    params.itemTypeId = filters.itemTypeId;
+  }
+  if (filters?.userId !== undefined && filters?.userId !== null) {
+    if (filters.userId === 0 || filters.userId === -1) {
+      // Filter for warehouse items (USER_ID is NULL)
+      where.push('i.USER_ID IS NULL');
+    } else {
+      where.push('i.USER_ID = :userId');
+      params.userId = filters.userId;
+    }
   }
   if (filters?.deptId) {
     where.push('i.DEPT_ID = :deptId');
     params.deptId = filters.deptId;
   }
   if (filters?.serial) {
-    where.push('i.SERIAL LIKE :serial');
+    where.push('UPPER(i.SERIAL) LIKE UPPER(:serial)');
     params.serial = `%${filters.serial}%`;
+  }
+  if (filters?.itemName) {
+    where.push('UPPER(i.ITEM_NAME) LIKE UPPER(:itemName)');
+    params.itemName = `%${filters.itemName}%`;
+  }
+  if (filters?.ip) {
+    where.push('i.IP LIKE :ip');
+    params.ip = `%${filters.ip}%`;
+  }
+  if (filters?.compName) {
+    where.push('UPPER(i.COMP_NAME) LIKE UPPER(:compName)');
+    params.compName = `%${filters.compName}%`;
   }
 
   if (where.length > 0) {

@@ -71,13 +71,55 @@ export async function GET(
   try {
     connection = await getConnection();
     const { id } = await params;
+    
+    // ✅ جلب معلومات المستخدم الكاملة مع الـ JOINs
     const result = await connection.execute(
-      `SELECT USER_ID AS ID, USERNAME, EMAIL, ROLE_ID, CREATED_AT FROM far3.USERS WHERE USER_ID = :id`,
+      `SELECT 
+        u.USER_ID AS ID, 
+        u.USERNAME, 
+        u.EMAIL, 
+        u.FULL_NAME,
+        u.PHONE,
+        u.IS_ACTIVE,
+        u.ROLE_ID,
+        u.DEPT_ID,
+        u.RANK_ID,
+        u.FLOOR_ID,
+        u.CREATED_AT,
+        r.NAME AS ROLE_NAME,
+        d.DEPT_NAME,
+        k.RANK_NAME,
+        f.FLOOR_NAME,
+        (SELECT COUNT(*) FROM far3.ITEMS WHERE USER_ID = u.USER_ID) AS ITEMS_COUNT
+      FROM far3.USERS u
+      LEFT JOIN far3.ROLES r ON u.ROLE_ID = r.ROLE_ID
+      LEFT JOIN far3.DEPARTMENTS d ON u.DEPT_ID = d.DEPT_ID
+      LEFT JOIN far3.RANKS k ON u.RANK_ID = k.RANK_ID
+      LEFT JOIN far3.FLOORS f ON u.FLOOR_ID = f.FLOOR_ID
+      WHERE u.USER_ID = :id`,
       { id: Number(id) },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
 
-    const user = result.rows?.[0] as { ID: number; USERNAME: string; EMAIL: string; ROLE_ID?: number; CREATED_AT?: string } | undefined;
+    const user = result.rows?.[0] as { 
+      ID: number; 
+      USERNAME: string; 
+      EMAIL: string; 
+      FULL_NAME?: string;
+      PHONE?: string;
+      IS_ACTIVE?: number;
+      ROLE_ID?: number;
+      DEPT_ID?: number;
+      RANK_ID?: number;
+      FLOOR_ID?: number;
+      CREATED_AT?: string;
+      ROLE_NAME?: string;
+      DEPT_NAME?: string;
+      RANK_NAME?: string;
+      FLOOR_NAME?: string;
+      ITEMS_COUNT?: number;
+    } | undefined;
+    
     if (!user) {
       return NextResponse.json({ message: "user not found" }, { status: 404 });
     }

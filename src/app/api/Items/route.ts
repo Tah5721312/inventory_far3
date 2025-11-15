@@ -22,11 +22,17 @@ export async function GET(request: NextRequest) {
     }
 
     // جلب جميع الأصناف مع الفلاتر
+    const userIdParam = searchParams.get('userId');
     const filters = {
+      catId: searchParams.get('catId') ? Number(searchParams.get('catId')) : undefined,
       subCatId: searchParams.get('subCatId') ? Number(searchParams.get('subCatId')) : undefined,
-      userId: searchParams.get('userId') ? Number(searchParams.get('userId')) : undefined,
+      itemTypeId: searchParams.get('itemTypeId') ? Number(searchParams.get('itemTypeId')) : undefined,
+      userId: userIdParam === 'warehouse' ? null : (userIdParam ? Number(userIdParam) : undefined),
       deptId: searchParams.get('deptId') ? Number(searchParams.get('deptId')) : undefined,
       serial: searchParams.get('serial') || undefined,
+      itemName: searchParams.get('itemName') || undefined,
+      ip: searchParams.get('ip') || undefined,
+      compName: searchParams.get('compName') || undefined,
     };
 
     const items = await getAllItems(filters);

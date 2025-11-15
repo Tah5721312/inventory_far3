@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Printer, BarChart3, RefreshCw, ArrowRight, Home } from 'lucide-react';
+import { Printer, BarChart3, RefreshCw, ArrowRight, Home, FileText } from 'lucide-react';
 import Link from 'next/link';
 
 interface Statistics {
@@ -57,6 +57,272 @@ export default function StatisticsPage() {
   const handlePrint = () => {
     // طباعة الصفحة كـ PDF
     window.print();
+  };
+
+  const handleExportMainCategoriesPDF = () => {
+    if (!statistics) return;
+
+    // الحصول على URL الصورة (استخدام الصورة الموجودة أو placeholder)
+    const logoUrl = window.location.origin + '/EDARA_LOGO.png';
+    
+    // تحويل الأرقام إلى الأرقام العربية
+    const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    const toArabicNum = (num: number): string => {
+      return num.toString().replace(/\d/g, (digit) => arabicNumbers[parseInt(digit)]);
+    };
+    
+    // إنشاء HTML للتصنيفات الرئيسية فقط بنفس التنسيق
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="ar" dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>تقرير عهدة أجهزة ومعدات الحاسب</title>
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: 'Arial', sans-serif;
+              background: #f5f5f5;
+              padding: 10px;
+            }
+            .page {
+              max-width: 800px;
+              margin: 0 auto;
+              background: white;
+              border: 3px solid #000;
+              padding: 15px;
+              min-height: auto;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 15px;
+            }
+            .logo {
+              width: 60px;
+              height: 60px;
+              border: 2px solid #000;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 10px;
+              background: #f0f0f0;
+              flex-shrink: 0;
+              order: 2;
+              overflow: hidden;
+            }
+            .logo img {
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
+              padding: 3px;
+            }
+            .header-content {
+              text-align: right;
+              order: 1;
+            }
+            .header-text {
+              font-size: 11px;
+              line-height: 1.5;
+              margin-bottom: 2px;
+            }
+            .title {
+              font-size: 13px;
+              font-weight: 900;
+              margin: 12px 0;
+              text-align: center;
+              border: 2px solid #000;
+              padding: 6px;
+              background: #f9f9f9;
+            }
+            .subtitle {
+              font-size: 12px;
+              font-weight: 900;
+              text-align: center;
+              margin: 8px 0;
+              text-decoration: underline;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 15px 0;
+              font-size: 11px;
+            }
+            th, td {
+              border: 2px solid #000;
+              padding: 6px 8px;
+              text-align: center;
+              font-size: 11px;
+            }
+            th {
+              background-color: #d3d3d3;
+              font-weight: bold;
+            }
+            td {
+              min-height: 30px;
+              line-height: 1.4;
+            }
+            .signatures {
+              display: flex;
+              justify-content: space-between;
+              margin-top: 40px;
+              padding: 0 15px;
+            }
+            .signature-block {
+              text-align: right;
+              width: 45%;
+            }
+            .signature-line {
+              margin-top: 35px;
+              font-size: 11px;
+              line-height: 1.6;
+              text-align: right;
+            }
+            .signature-title {
+              font-weight: bold;
+              margin-bottom: 3px;
+              font-size: 11px;
+              text-align: right;
+            }
+            .signature-line-space {
+              display: inline-block;
+              min-width: 120px;
+              height: 14px;
+              vertical-align: bottom;
+              margin: 0 2px;
+            }
+            @media print {
+              @page {
+                size: A4;
+                margin: 0.8cm;
+              }
+              body {
+                background: white;
+                padding: 0;
+              }
+              .page {
+                border: none;
+                box-shadow: none;
+                padding: 12px;
+              }
+              .header {
+                margin-bottom: 10px;
+              }
+              .title {
+                margin: 8px 0;
+                padding: 5px;
+                font-size: 12px;
+                font-weight: 900;
+              }
+              .subtitle {
+                margin: 5px 0;
+                font-size: 11px;
+                font-weight: 900;
+              }
+              table {
+                margin: 10px 0;
+                font-size: 10px;
+              }
+              th, td {
+                padding: 5px 6px;
+                font-size: 10px;
+              }
+              .signatures {
+                margin-top: 30px;
+              }
+              .signature-line {
+                margin-top: 25px;
+                font-size: 10px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="page">
+            <!-- Header -->
+            <div class="header">
+             <div class="logo">
+                <img src="${logoUrl}" alt="شعار" onerror="this.style.display='none'; this.parentElement.innerHTML='[شعار]';" />
+              </div>
+              <div class="header-content">
+                <div class="header-text">tah57</div>
+               
+              </div>
+            </div>
+            
+            <!-- Title -->
+            <div class="title">
+            
+              يومية عددية بأجهزة ومعدات الحاسب فرع نظم المعلومات ملحق (1)
+            </div>
+            
+            <!-- Subtitle -->
+            <div class="subtitle">
+              العنوان
+            </div>
+            
+            <!-- Table -->
+            <table>
+              <thead>
+                <tr>
+                <th>اســـــم الصــــنـــــف</th>
+                <th>العدد بالعهدة</th>
+                <th>ملاحـــظــــــات</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${statistics.mainCategories.map(cat => `
+                  <tr>
+                  <td>${cat.CAT_NAME}</td>
+                  <td>${toArabicNum(cat.ITEM_COUNT)}</td>
+                  <td></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            
+            <!-- Signatures -->
+            <div class="signatures">
+              <div class="signature-block">
+                <div class="signature-line">
+                  <div class="signature-title">إعتماد اللجنة</div>
+                  <div>التوقيع (<span class="signature-line-space">               </span>)</div>
+                    <div> <br /> </div>
+                 <div>رئيس فرع </div>
+                </div>
+              </div>
+              <div class="signature-block">
+                <div class="signature-line">
+                  <div class="signature-title">إعتماد الإدارة</div>
+                  <div>التوقيع (<span class="signature-line-space">             </span>)</div>
+                  <div> <br /> </div>
+                  <div>رئيس فريق مراجعة العهدة</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // فتح صفحة جديدة مع المحتوى
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      
+      // الانتظار قليلاً ثم فتح نافذة الطباعة
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
   };
 
   const getSituationBadge = (situation: string) => {
@@ -169,24 +435,42 @@ export default function StatisticsPage() {
         <div className="space-y-6 print:space-y-4">
           {/* Main Categories */}
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 print:rounded-lg print:shadow-md print:break-inside-avoid">
-            <h2 className="text-xl font-bold text-slate-800 mb-4 pb-3 border-b-2 border-blue-100">
-              التصنيفات الرئيسية
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {statistics.mainCategories.map((cat) => (
-                <div
-                  key={cat.CAT_ID}
-                  className="p-4 border-2 border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-semibold text-slate-800">{cat.CAT_NAME}</div>
-                      <div className="text-sm text-slate-500 mt-1">ID: {cat.CAT_ID}</div>
-                    </div>
-                    <div className="text-2xl font-bold text-blue-600 ml-4">{cat.ITEM_COUNT}</div>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-blue-100">
+              <h2 className="text-xl font-bold text-slate-800">
+                التصنيفات الرئيسية
+              </h2>
+              <button
+                onClick={handleExportMainCategoriesPDF}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold shadow-md hover:shadow-lg print:hidden"
+                title="تصدير PDF للتصنيفات الرئيسية"
+              >
+                <FileText size={18} />
+                <span className="hidden sm:inline">PDF</span>
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full table-auto border-collapse">
+                <thead className="bg-slate-50 border-b-2 border-slate-200 sticky top-0 z-10">
+                  <tr>
+                    {/* <th className="px-4 py-3 text-right text-sm font-bold text-slate-700 whitespace-nowrap">معرف التصنيف</th> */}
+                    <th className="px-4 py-3 text-right text-sm font-bold text-slate-700 whitespace-nowrap">اسم التصنيف الرئيسي</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold text-slate-700 whitespace-nowrap">العدد</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statistics.mainCategories.map((cat) => (
+                    <tr key={cat.CAT_ID} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      {/* <td className="px-4 py-3 text-sm text-slate-600">{cat.CAT_ID}</td> */}
+                      <td className="px-4 py-3 text-sm font-medium text-slate-800">{cat.CAT_NAME}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
+                          {cat.ITEM_COUNT}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -201,14 +485,22 @@ export default function StatisticsPage() {
                   <tr>
                     <th className="px-4 py-3 text-right text-sm font-bold text-slate-700 whitespace-nowrap">التصنيف الرئيسي</th>
                     <th className="px-4 py-3 text-right text-sm font-bold text-slate-700 whitespace-nowrap">التصنيف الفرعي</th>
-                    <th className="px-4 py-3 text-center text-sm font-bold text-slate-700 whitespace-nowrap">عدد الأصناف</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold text-slate-700 whitespace-nowrap">العدد</th>
                   </tr>
                 </thead>
                 <tbody>
                   {statistics.subCategories.map((sub) => (
                     <tr key={sub.SUB_CAT_ID} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3 text-sm text-slate-600">{sub.MAIN_CATEGORY_NAME || '-'}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-slate-800">{sub.SUB_CAT_NAME}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">
+                        <div className="max-w-[200px] truncate" title={sub.MAIN_CATEGORY_NAME || '-'}>
+                          {sub.MAIN_CATEGORY_NAME || '-'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-slate-800">
+                        <div className="max-w-[750px] truncate" title={sub.SUB_CAT_NAME}>
+                          {sub.SUB_CAT_NAME}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-center">
                         <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
                           {sub.ITEM_COUNT}
@@ -616,6 +908,7 @@ export default function StatisticsPage() {
             width: 100% !important;
             margin-bottom: 0.5rem !important;
             font-size: 8px !important;
+            table-layout: auto !important;
           }
           
           table thead {
@@ -632,6 +925,7 @@ export default function StatisticsPage() {
             text-align: right !important;
             font-size: 8px !important;
             line-height: 1.2 !important;
+            white-space: nowrap !important;
           }
           
           table tbody td {
@@ -639,6 +933,18 @@ export default function StatisticsPage() {
             padding: 0.25rem 0.4rem !important;
             font-size: 8px !important;
             line-height: 1.3 !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            max-width: 300px !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+          }
+          
+          table tbody td div {
+            max-width: 100% !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
           }
           
           table tbody tr {
@@ -658,6 +964,32 @@ export default function StatisticsPage() {
             min-width: auto !important;
             width: auto !important;
             height: auto !important;
+            display: inline-flex !important;
+          }
+          
+          /* تحسين عرض النصوص الطويلة في الجداول */
+          table td .max-w-\\[750px\\] {
+            max-width: 400px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            display: block !important;
+          }
+          
+          table td .max-w-\\[200px\\] {
+            max-width: 150px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            display: block !important;
+          }
+          
+          table td .max-w-\\[250px\\] {
+            max-width: 200px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            display: block !important;
           }
           
           /* إزالة الـ hover effects في الطباعة */
