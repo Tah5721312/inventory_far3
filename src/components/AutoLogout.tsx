@@ -4,10 +4,10 @@ import { useEffect, useRef } from 'react';
 import { signOut } from 'next-auth/react';
 
 interface AutoLogoutProps {
-  inactivityTimeout?: number; // in milliseconds, default 1 hour (3600000ms)
+  inactivityTimeout?: number; // in milliseconds, default 15 minutes (900000ms)
 }
 
-export default function AutoLogout({ inactivityTimeout = 60 * 60 * 1000 }: AutoLogoutProps) {
+export default function AutoLogout({ inactivityTimeout = 15 * 60 * 1000 }: AutoLogoutProps) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
 

@@ -1,3 +1,5 @@
+import 'server-only';
+
 import dotenv from 'dotenv';
 dotenv.config();
 

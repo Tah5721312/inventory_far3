@@ -1,9 +1,14 @@
 // app/api/ranks/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helper';
 import { getAllRanks, createRank } from '@/lib/db_utils';
 
 export async function GET() {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const ranks = await getAllRanks();
     return NextResponse.json({ success: true, data: ranks }, { status: 200 });
   } catch (error) {
@@ -18,6 +23,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const body = await request.json();
     const { RANK_NAME } = body;
 

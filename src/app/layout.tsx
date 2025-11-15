@@ -25,7 +25,21 @@ export const metadata: Metadata = {
     shortcut: '/favicon/favicon-16x16.png',
     apple: '/favicon/apple-touch-icon.png',
   },
-  manifest: `/favicon/site.webmanifest`,
+  manifest: '/favicon/site.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'إدارة المخزون',
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+  },
+  themeColor: '#2563eb',
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
   openGraph: {
     url: siteConfig.url,
     title: siteConfig.title,
@@ -56,7 +70,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html>
+    <html  >
       <body>
         <Providers>
           <Navigation />

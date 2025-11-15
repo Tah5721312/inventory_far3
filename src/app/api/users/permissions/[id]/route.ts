@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helper';
 import { getConnection } from '@/lib/database';
 import oracledb from 'oracledb';
 
@@ -19,6 +20,10 @@ export async function GET(
 ) {
   let connection: oracledb.Connection | undefined;
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const { id } = await params;
     connection = await getConnection();
     const result = await connection.execute<VwPermissionRow>(

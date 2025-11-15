@@ -1,13 +1,10 @@
-import NewUserForm from "./NewUserForm";
-import Hero from "@/components/Hero";
+import NewUserPageContent from "./content";
+import { requireAuthServer } from '@/lib/auth-helper';
 
-const NewUserPage = () => {
-  return (
-    <>
-      <Hero />
-      <NewUserForm />
-    </>
-  );
-};
+export default async function NewUserPage() {
+  // ✅ التحقق من تسجيل الدخول
+  await requireAuthServer();
 
-export default NewUserPage;
+  return <NewUserPageContent />;
+}
+

@@ -1,9 +1,14 @@
 // app/api/item-types/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helper';
 import { getAllItemTypes, createItemType } from '@/lib/db_utils';
 
 export async function GET() {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const itemTypes = await getAllItemTypes();
     return NextResponse.json({ success: true, data: itemTypes });
   } catch (error) {
@@ -18,6 +23,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const body = await request.json();
     const { ITEM_TYPE_NAME, SUB_CAT_ID } = body;
 

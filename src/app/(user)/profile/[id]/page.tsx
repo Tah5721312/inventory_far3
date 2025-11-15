@@ -1,5 +1,5 @@
 import React from "react";
-import { redirect } from 'next/navigation';
+import { requireAuthServer } from '@/lib/auth-helper';
 import { auth } from '@/auth';
 import { cookies } from 'next/headers';
 
@@ -8,10 +8,15 @@ interface Props {
 }
 
 export default async function ProfilePage({ params }: Props) {
+  // ✅ التحقق من تسجيل الدخول
+  await requireAuthServer();
+
   const session = await auth();
   const { id } = await params;
+
+  // بعد requireAuthServer، session موجود بالتأكيد
   if (!session?.user) {
-    redirect('/login');
+    return null; // لن يحدث أبداً ولكن للتحقق من TypeScript
   }
 
   // ✅ التحقق إن المستخدم مش بيحاول يفتح بروفايل حد تاني

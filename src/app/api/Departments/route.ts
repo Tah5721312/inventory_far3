@@ -1,9 +1,14 @@
 // app/api/departments/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helper';
 import { getAllDepartments, createDepartment } from '@/lib/db_utils';
 
 export async function GET() {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const departments = await getAllDepartments();
     console.log('📦 Fetched departments from DB:', departments);
     console.log('📦 Number of departments:', departments?.length || 0);
@@ -20,6 +25,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const body = await request.json();
     const { DEPT_NAME } = body;
 

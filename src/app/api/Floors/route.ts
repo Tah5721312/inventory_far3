@@ -1,9 +1,14 @@
 // app/api/floors/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helper';
 import { getAllFloors, createFloor } from '@/lib/db_utils';
 
 export async function GET() {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const floors = await getAllFloors();
     console.log('🏢 Fetched floors from DB:', floors);
     console.log('🏢 Number of floors:', floors?.length || 0);
@@ -20,6 +25,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const body = await request.json();
     const { FLOOR_NAME } = body;
 

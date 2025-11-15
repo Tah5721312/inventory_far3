@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helper';
 import { getStatistics } from '@/lib/db_utils';
 
 export async function GET(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const statistics = await getStatistics();
     
     return NextResponse.json({ 

@@ -1,11 +1,16 @@
 // app/api/items/route.ts - نسخة نهائية ومُختبرة
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helper';
 import { getAllItems, getItemById, createItem, updateItem, deleteItem } from '@/lib/db_utils';
 
 // GET - جلب جميع الأصناف أو صنف معين
 export async function GET(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -60,6 +65,10 @@ export async function GET(request: NextRequest) {
 // POST - إضافة صنف جديد
 export async function POST(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const body = await request.json();
     
     // التحقق من البيانات المطلوبة
@@ -102,6 +111,10 @@ export async function POST(request: NextRequest) {
 // PUT - تحديث صنف
 export async function PUT(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const body = await request.json();
     const { ITEM_ID, ...updateData } = body;
 
@@ -145,6 +158,10 @@ export async function PUT(request: NextRequest) {
 // DELETE - حذف صنف
 export async function DELETE(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 

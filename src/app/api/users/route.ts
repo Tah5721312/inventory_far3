@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helper';
 import { executeQuery } from '@/lib/database';
 import bcrypt from 'bcryptjs';
 
@@ -28,6 +29,10 @@ interface UserWithRolePermissions {
 
 export async function GET(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const { searchParams } = new URL(request.url);
     const usernameFilter = searchParams.get('username') || '';
     const roleFilter = searchParams.get('role') || '';
@@ -168,6 +173,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const body = await request.json();
     const { username, email, fullName, password, roleId, phone, deptId, rankId, floorId, isActive } = body;
 

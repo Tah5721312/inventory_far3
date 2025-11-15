@@ -1,5 +1,6 @@
 // app/api/main-categories/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helper';
 import {
   getAllMainCategories,
   createMainCategory,
@@ -8,6 +9,10 @@ import {
 // GET: جلب جميع التصنيفات الرئيسية
 export async function GET() {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const categories = await getAllMainCategories();
     return NextResponse.json({ success: true, data: categories });
   } catch (error) {
@@ -23,6 +28,10 @@ export async function GET() {
 // POST: إضافة تصنيف رئيسي جديد
 export async function POST(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const body = await request.json();
     const { CAT_NAME, DESCRIPTION } = body;
 

@@ -10,7 +10,7 @@ export async function getAllItems(filters?: {
   catId?: number;
   subCatId?: number;
   itemTypeId?: number;
-  userId?: number;
+  userId?: number | null; // يمكن أن يكون null للـ warehouse
   deptId?: number;
   serial?: string;
   itemName?: string;

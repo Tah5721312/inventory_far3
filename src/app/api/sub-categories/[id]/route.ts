@@ -1,6 +1,7 @@
 // =============================================================
 // app/api/sub-categories/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helper';
 import {
   getSubCategoryById,
   updateSubCategory,
@@ -13,6 +14,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const { id: idString } = await params;
     const id = parseInt(idString);
     const subCategory = await getSubCategoryById(id);
@@ -40,6 +45,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const { id: idString } = await params;
     const id = parseInt(idString);
     const body = await request.json();
@@ -107,6 +116,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const { id: idString } = await params;
     const id = parseInt(idString);
     const rowsAffected = await deleteSubCategory(id);

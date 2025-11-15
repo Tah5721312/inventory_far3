@@ -1,5 +1,6 @@
 // app/api/item-types/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helper';
 import { getItemTypeById, updateItemType, deleteItemType } from '@/lib/db_utils';
 
 export async function GET(
@@ -7,6 +8,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const { id } = await params;
     const itemType = await getItemTypeById(parseInt(id));
     
@@ -32,6 +37,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const { id } = await params;
     const body = await request.json();
     const { ITEM_TYPE_NAME, SUB_CAT_ID } = body;
@@ -83,6 +92,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const { id } = await params;
     const rowsAffected = await deleteItemType(parseInt(id));
 

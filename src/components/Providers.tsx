@@ -9,7 +9,7 @@ import 'react-toastify/dist/ReactToastify.css';
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <AutoLogout inactivityTimeout={60 * 60 * 1000} /> {/* 1 hour inactivity timeout */}
+      <AutoLogout inactivityTimeout={15 * 60 * 1000} /> {/* 15 minutes inactivity timeout */}
       {children}
       <ToastContainer
         position="top-right"

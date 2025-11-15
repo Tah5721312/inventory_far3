@@ -1,5 +1,6 @@
 // app/api/sub-categories/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helper';
 import {
   getAllSubCategories,
   createSubCategory,
@@ -8,6 +9,10 @@ import {
 // GET: جلب جميع التصنيفات الفرعية
 export async function GET() {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const subCategories = await getAllSubCategories();
     return NextResponse.json({ success: true, data: subCategories });
   } catch (error) {
@@ -23,6 +28,10 @@ export async function GET() {
 // POST: إضافة تصنيف فرعي جديد
 export async function POST(request: NextRequest) {
   try {
+    // ✅ التحقق من تسجيل الدخول
+    const authCheck = await requireAuth();
+    if (authCheck) return authCheck;
+
     const body = await request.json();
     const { SUB_CAT_NAME, CAT_ID, DESCRIPTION } = body;
 
