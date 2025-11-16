@@ -24,9 +24,27 @@ export const {
   secret: process.env.NEXTAUTH_SECRET || 'your-secret-key-here',
   session: { 
     strategy: "jwt",
-    maxAge: 24 * 60 * 60,
-    updateAge: 60 * 60,
+    maxAge: 15 * 60, // 15 minutes - session expires after 15 minutes
+    updateAge: 60, // Update session every 60 seconds when user is active (to reset the 15-minute timer)
   },
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' 
+        ? `__Secure-next-auth.session-token`
+        : `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        // NextAuth يستخدم maxAge من session.maxAge تلقائياً للكوكيز
+        // لجعل الكوكيز session-only (تختفي عند إغلاق المتصفح)،
+        // نحتاج إلى عدم وضع maxAge في cookie options
+        // لكن NextAuth يضيفه تلقائياً، لذلك سنستخدم callback لتعديل الكوكيز
+      },
+    },
+  },
+  useSecureCookies: process.env.NODE_ENV === 'production',
   pages: {
     signIn: '/login', // تحديد صفحة الـ login
   },
@@ -96,7 +114,7 @@ export const {
     }),
   ],
   jwt: {
-    maxAge: 24 * 60 * 60,
+    maxAge: 15 * 60, // 15 minutes to match session maxAge
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -107,6 +125,10 @@ export const {
         token.roleId = (user as any).roleId ?? 0;
         token.isGuest = (user as any).isGuest ?? false;
       }
+      
+      // NextAuth يدير انتهاء الجلسة تلقائياً بناءً على maxAge
+      // updateAge يقوم بتحديث الجلسة كل 60 ثانية عند التفاعل
+      // إذا لم يكن هناك تفاعل لمدة 15 دقيقة، الجلسة ستنتهي تلقائياً
       
       return token;
     },

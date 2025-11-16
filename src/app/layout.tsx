@@ -1,4 +1,4 @@
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
 import * as React from 'react';
 
 import '@/styles/globals.css';
@@ -31,12 +31,6 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'إدارة المخزون',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 5,
-  },
-  themeColor: '#2563eb',
   other: {
     'mobile-web-app-capable': 'yes',
   },
@@ -62,6 +56,14 @@ export const metadata: Metadata = {
   //     url: 'https://theodorusclarence.com',
   //   },
   // ],
+};
+
+// ✅ في Next.js 15، يجب نقل viewport و themeColor إلى export منفصل
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#2563eb',
 };
 
 export default function RootLayout({

@@ -38,16 +38,23 @@ export default function StatisticsPageContent() {
       const response = await fetch('/api/statistics');
       const data = await response.json();
       
-      if (data.success) {
+      // ✅ التعامل مع البيانات بشكل صحيح - إذا كانت البيانات فارغة أو حدث خطأ، نضع statistics إلى null
+      if (data.success && data.data) {
         setStatistics(data.data);
+      } else if (data.success === false && data.error) {
+        // خطأ من السيرفر - نضع statistics إلى null، سيتم عرض "لا يوجد بيانات" تلقائياً
+        setStatistics(null);
+        setError(null); // لا نعرض رسالة خطأ، فقط نضع البيانات فارغة
       } else {
-        // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
-        const errorMessage = typeof data.error === 'string' ? data.error : 'فشل في جلب الإحصائيات';
-        setError(errorMessage);
+        // استجابة غير متوقعة - نضع statistics إلى null
+        setStatistics(null);
+        setError(null);
       }
     } catch (err) {
-      console.error('Error fetching statistics:', err);
-      setError('حدث خطأ أثناء جلب الإحصائيات');
+      // في حالة catch، نضع statistics إلى null بدون إظهار console.error أو setError
+      // سيتم عرض "لا يوجد بيانات" تلقائياً
+      setStatistics(null);
+      setError(null);
     } finally {
       setLoading(false);
     }
@@ -352,16 +359,53 @@ export default function StatisticsPageContent() {
     );
   }
 
-  if (error) {
+  if (!statistics && !loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 sm:p-6 md:p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <p className="text-red-600 text-lg font-medium mb-4">{error}</p>
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl shadow-xl p-6 sm:p-8 mb-6 text-white">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+             
+            <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/items"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-xl transition-all font-semibold backdrop-blur-sm"
+                >
+                  <Home size={18} />
+                  <span className="hidden sm:inline">الأصناف</span>
+                </Link>
+                <button
+                  onClick={fetchStatistics}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-xl transition-all font-semibold backdrop-blur-sm"
+                >
+                  <RefreshCw size={18} />
+                  <span className="hidden sm:inline">تحديث</span>
+                </button>
+              </div>
+               <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <BarChart3 className="text-white" size={32} />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">الإحصائيات الشاملة</h1>
+                  <p className="text-blue-100 text-sm sm:text-base">نظرة شاملة على جميع البيانات والإحصائيات</p>
+                </div>
+              </div>
+             
+            </div>
+          </div>
+
+          {/* Empty State */}
+          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+            <BarChart3 className="w-16 h-16 mx-auto mb-4 text-slate-400" />
+            <p className="text-slate-700 text-xl font-semibold mb-2">لا توجد بيانات</p>
+            <p className="text-slate-500 text-sm mb-6">لا توجد إحصائيات متاحة حالياً</p>
             <button
               onClick={fetchStatistics}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold shadow-md hover:shadow-lg"
             >
+              <RefreshCw size={20} />
               إعادة المحاولة
             </button>
           </div>
@@ -370,6 +414,7 @@ export default function StatisticsPageContent() {
     );
   }
 
+  // إذا لم تكن statistics موجودة، لا نعرض المحتوى
   if (!statistics) {
     return null;
   }

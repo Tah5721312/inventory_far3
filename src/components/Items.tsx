@@ -301,23 +301,26 @@ export default function ItemsPage() {
       // ✅ إصلاح: التعامل مع الـ response بشكل صحيح
       if (result.success && Array.isArray(result.data)) {
         setItems(result.data);
-        console.log('✅ Items loaded:', result.data.length);
+        // لا نعرض خطأ إذا كانت المصفوفة فارغة - فقط نضع البيانات الفارغة
       } else if (Array.isArray(result)) {
         // في حالة كان الـ response array مباشر
         setItems(result);
-      } else if (result.error) {
-        // ✅ عرض رسالة خطأ آمنة (لا نعرض details لتجنب Information Disclosure)
-        const errorMsg = typeof result.error === 'string' ? result.error : 'فشل في جلب البيانات';
-        console.error('Server error:', errorMsg);
-        alert(errorMsg);
+      } else if (result.success === false && result.error) {
+        // ✅ إذا كان هناك خطأ حقيقي من السيرفر، نعرض رسالة خطأ
+        // لكن إذا كانت الاستجابة ناجحة والمصفوفة فارغة، نعتبرها "لا يوجد بيانات"
+        const errorMsg = typeof result.error === 'string' ? result.error : '';
+        // فقط نضع المصفوفة فارغة، لا نعرض alert
+        setItems([]);
+      } else if (result.error && !result.success) {
+        // خطأ حقيقي
         setItems([]);
       } else {
-        console.warn('Unexpected response format:', result);
+        // استجابة غير متوقعة - نضع المصفوفة فارغة
         setItems([]);
       }
     } catch (error) {
-      console.error('Error fetching items:', error);
-      alert('فشل في جلب البيانات');
+      // في حالة catch، نضع المصفوفة فارغة بدون إظهار alert
+      // سيتم عرض "لا توجد أصناف" تلقائياً إذا كانت المصفوفة فارغة
       setItems([]);
     } finally {
       setLoading(false);

@@ -1,9 +1,17 @@
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
 import * as React from 'react';
 import { RiAlarmWarningFill } from 'react-icons/ri';
 
 export const metadata: Metadata = {
   title: 'Not Found',
+};
+
+// ✅ في Next.js 15، يجب نقل viewport و themeColor إلى export منفصل
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#2563eb',
 };
 
 export default function NotFound() {

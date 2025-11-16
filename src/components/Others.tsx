@@ -66,9 +66,22 @@ export default function UnifiedManagementPage() {
       setDeptLoading(true);
       const res = await fetch('/api/departments');
       const data = await res.json();
-      setDepartments(data.data || data);
+      
+      // ✅ التعامل مع البيانات بشكل صحيح - إذا كانت المصفوفة فارغة، نضعها فارغة بدون إظهار خطأ
+      if (Array.isArray(data.data)) {
+        setDepartments(data.data);
+      } else if (Array.isArray(data)) {
+        setDepartments(data);
+      } else if (data.success === false && data.error) {
+        // خطأ من السيرفر - نضع المصفوفة فارغة فقط، سيظهر "لا توجد أقسام" تلقائياً
+        setDepartments([]);
+      } else {
+        setDepartments([]);
+      }
     } catch (error) {
-      console.error('Error fetching departments:', error);
+      // في حالة catch، نضع المصفوفة فارغة بدون إظهار console.error
+      // سيتم عرض "لا توجد أقسام" تلقائياً إذا كانت المصفوفة فارغة
+      setDepartments([]);
     } finally {
       setDeptLoading(false);
     }
@@ -138,9 +151,22 @@ export default function UnifiedManagementPage() {
       setRankLoading(true);
       const res = await fetch('/api/ranks');
       const data = await res.json();
-      setRanks(data.data || data);
+      
+      // ✅ التعامل مع البيانات بشكل صحيح - إذا كانت المصفوفة فارغة، نضعها فارغة بدون إظهار خطأ
+      if (Array.isArray(data.data)) {
+        setRanks(data.data);
+      } else if (Array.isArray(data)) {
+        setRanks(data);
+      } else if (data.success === false && data.error) {
+        // خطأ من السيرفر - نضع المصفوفة فارغة فقط، سيظهر "لا توجد رتب" تلقائياً
+        setRanks([]);
+      } else {
+        setRanks([]);
+      }
     } catch (error) {
-      console.error('Error fetching ranks:', error);
+      // في حالة catch، نضع المصفوفة فارغة بدون إظهار console.error
+      // سيتم عرض "لا توجد رتب" تلقائياً إذا كانت المصفوفة فارغة
+      setRanks([]);
     } finally {
       setRankLoading(false);
     }
@@ -210,9 +236,22 @@ export default function UnifiedManagementPage() {
       setFloorLoading(true);
       const res = await fetch('/api/floors');
       const data = await res.json();
-      setFloors(data.data || data);
+      
+      // ✅ التعامل مع البيانات بشكل صحيح - إذا كانت المصفوفة فارغة، نضعها فارغة بدون إظهار خطأ
+      if (Array.isArray(data.data)) {
+        setFloors(data.data);
+      } else if (Array.isArray(data)) {
+        setFloors(data);
+      } else if (data.success === false && data.error) {
+        // خطأ من السيرفر - نضع المصفوفة فارغة فقط، سيظهر "لا توجد طوابق" تلقائياً
+        setFloors([]);
+      } else {
+        setFloors([]);
+      }
     } catch (error) {
-      console.error('Error fetching floors:', error);
+      // في حالة catch، نضع المصفوفة فارغة بدون إظهار console.error
+      // سيتم عرض "لا توجد طوابق" تلقائياً إذا كانت المصفوفة فارغة
+      setFloors([]);
     } finally {
       setFloorLoading(false);
     }

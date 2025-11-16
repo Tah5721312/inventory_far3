@@ -86,19 +86,9 @@ export default function UsersPageContent() {
       // Fetch users
       try {
         const usersResponse = await fetch('/api/users');
-        if (!usersResponse.ok) {
-          const errorText = await usersResponse.text();
-          console.error('Users API error:', errorText);
-          throw new Error(`Failed to fetch users: ${usersResponse.status}`);
-        }
-        
-        const contentType = usersResponse.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Response is not JSON');
-        }
-        
         const usersResult = await usersResponse.json();
         
+        // ✅ التعامل مع البيانات بشكل صحيح - إذا كانت المصفوفة فارغة، نضعها فارغة بدون إظهار خطأ
         if (usersResult.users && Array.isArray(usersResult.users)) {
           setUsers(usersResult.users);
           // Extract unique roles from users (since /api/roles doesn't exist)
@@ -114,60 +104,76 @@ export default function UsersPageContent() {
           if (uniqueRoles.size > 0) {
             setRoles(Array.from(uniqueRoles.values()));
           }
-        } else if (usersResult.error) {
-          // ✅ عرض رسالة خطأ آمنة (React يقوم بـ escaping تلقائياً، لكن نتأكد من وجود message)
-          const errorMessage = typeof usersResult.error === 'string' ? usersResult.error : 'فشل في جلب المستخدمين';
-          showNotification('error', errorMessage);
+        } else if (usersResult.success === false && usersResult.error) {
+          // خطأ من السيرفر - نضع المصفوفة فارغة فقط، سيظهر "لا توجد مستخدمين" تلقائياً
+          setUsers([]);
+        } else if (Array.isArray(usersResult)) {
+          // إذا كان الـ response array مباشر
+          setUsers(usersResult);
         } else {
-          console.error('Unexpected users response format:', usersResult);
+          // استجابة غير متوقعة - نضع المصفوفة فارغة
+          setUsers([]);
         }
       } catch (error) {
-        console.error('Error fetching users:', error);
-        showNotification('error', 'فشل في جلب المستخدمين');
-        throw error; // Re-throw to be caught by outer catch
+        // في حالة catch، نضع المصفوفة فارغة بدون إظهار console.error أو notification
+        // سيتم عرض "لا توجد مستخدمين" تلقائياً إذا كانت المصفوفة فارغة
+        setUsers([]);
       }
 
       // Fetch departments
       try {
         const departmentsResponse = await fetch('/api/departments');
-        if (departmentsResponse.ok) {
-          const departmentsResult = await departmentsResponse.json();
-          if (departmentsResult.success && departmentsResult.data) {
-            setDepartments(departmentsResult.data);
-          }
+        const departmentsResult = await departmentsResponse.json();
+        
+        if (Array.isArray(departmentsResult.data)) {
+          setDepartments(departmentsResult.data);
+        } else if (Array.isArray(departmentsResult)) {
+          setDepartments(departmentsResult);
+        } else {
+          setDepartments([]);
         }
       } catch (error) {
-        console.error('Error fetching departments:', error);
+        // في حالة catch، نضع المصفوفة فارغة بدون إظهار console.error
+        setDepartments([]);
       }
 
       // Fetch ranks
       try {
         const ranksResponse = await fetch('/api/ranks');
-        if (ranksResponse.ok) {
-          const ranksResult = await ranksResponse.json();
-          if (ranksResult.success && ranksResult.data) {
-            setRanks(ranksResult.data);
-          }
+        const ranksResult = await ranksResponse.json();
+        
+        if (Array.isArray(ranksResult.data)) {
+          setRanks(ranksResult.data);
+        } else if (Array.isArray(ranksResult)) {
+          setRanks(ranksResult);
+        } else {
+          setRanks([]);
         }
       } catch (error) {
-        console.error('Error fetching ranks:', error);
+        // في حالة catch، نضع المصفوفة فارغة بدون إظهار console.error
+        setRanks([]);
       }
 
       // Fetch floors
       try {
         const floorsResponse = await fetch('/api/floors');
-        if (floorsResponse.ok) {
-          const floorsResult = await floorsResponse.json();
-          if (floorsResult.success && floorsResult.data) {
-            setFloors(floorsResult.data);
-          }
+        const floorsResult = await floorsResponse.json();
+        
+        if (Array.isArray(floorsResult.data)) {
+          setFloors(floorsResult.data);
+        } else if (Array.isArray(floorsResult)) {
+          setFloors(floorsResult);
+        } else {
+          setFloors([]);
         }
       } catch (error) {
-        console.error('Error fetching floors:', error);
+        // في حالة catch، نضع المصفوفة فارغة بدون إظهار console.error
+        setFloors([]);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
-      showNotification('error', 'فشل في جلب البيانات');
+      // في حالة catch عامة، نضع البيانات فارغة فقط
+      // سيتم عرض "لا توجد مستخدمين" تلقائياً إذا كانت المصفوفة فارغة
+      setUsers([]);
     } finally {
       setLoading(false);
     }
