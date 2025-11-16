@@ -5,7 +5,7 @@ export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'USER' | 'GUEST';
 
 // تعريف الصلاحيات
 export type Actions = 'manage' | 'read' | 'create' | 'update' | 'delete';
-export type Subjects = 'User' | 'Item' | 'Category' | 'Department' | 'Floor' | 'Rank' | 'Dashboard' | 'all';
+export type Subjects = 'User' | 'Item' | 'Category' | 'Department' | 'Floor' | 'Rank' | 'Statistics' | 'Dashboard' | 'Reports' | 'all';
 
 export type AppAbility = PureAbility<[Actions, Subjects]>;
 
@@ -36,7 +36,9 @@ export function defineAbilityRulesFor(role: Role): AbilityRule[] {
       rules.push({ action: 'manage', subject: 'Department' });
       rules.push({ action: 'manage', subject: 'Floor' });
       rules.push({ action: 'manage', subject: 'Rank' });
+      rules.push({ action: 'read', subject: 'Statistics' });
       rules.push({ action: 'read', subject: 'Dashboard' });
+      rules.push({ action: 'read', subject: 'Reports' });
       break;
 
     case 'USER':

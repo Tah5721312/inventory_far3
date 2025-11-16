@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, X, Save, Filter, BarChart3, ArrowUpDown, ArrowUp, ArrowDown, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { escapeHtml } from '@/lib/security';
+import { Can } from '@/components/Can';
 
 interface Item {
   ITEM_ID: number;
@@ -1053,17 +1054,20 @@ export default function ItemsPage() {
           </div>
         ) : (
           <>
-            {/* PDF Export Button */}
-            <div className="flex justify-end mb-4 print:hidden">
-              <button
-                onClick={handleExportItemsPDF}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold shadow-md hover:shadow-lg"
-                title="تصدير PDF للأصناف"
-              >
-                <FileText size={18} />
-                <span>تصدير PDF</span>
-              </button>
-            </div>
+
+          {/* PDF Export Button - Only shown if user has reports read permission */}
+            <Can do="read" on="Reports">
+              <div className="flex justify-end mb-4 print:hidden">
+                <button
+                  onClick={handleExportItemsPDF}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold shadow-md hover:shadow-lg"
+                  title="تصدير PDF للأصناف"
+                >
+                  <FileText size={18} />
+                  <span>تصدير PDF</span>
+                </button>
+              </div>
+            </Can> 
 
             {/* Desktop Table View */}
             <div className="hidden lg:block bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200/50 overflow-hidden w-full">

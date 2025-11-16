@@ -18,6 +18,8 @@ import {
   TrendingUp
 } from 'lucide-react';
 import ThreeDGallery from '@/components/ThreeDGallery';
+import { Can } from '@/components/Can';
+
 
 export default function HomeContent() {
   const { data: session, status } = useSession();
@@ -187,7 +189,8 @@ export default function HomeContent() {
       </div>
 
       {/* Features Section */}
-      {isAuthenticated && (
+      <Can do="manage" on="all">
+        {isAuthenticated && (
         <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
           <div className="text-center mb-12" dir="rtl">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-200 mb-4">
@@ -225,7 +228,8 @@ export default function HomeContent() {
             })}
           </div>
         </div>
-      )}
+        )}
+   </Can> 
 
       {/* Footer */}
       <footer className="bg-white dark:bg-dark-800 border-t border-slate-200 dark:border-dark-700 mt-20 relative z-10">

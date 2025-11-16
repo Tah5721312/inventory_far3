@@ -20,7 +20,10 @@ export default async function ProfilePage({ params }: Props) {
   }
 
   // ✅ التحقق إن المستخدم مش بيحاول يفتح بروفايل حد تاني
-  if (String((session.user as any).id) !== String(id)) {
+  const currentUserId = String((session.user as any)?.userId || (session.user as any)?.id || '');
+  const requestedId = String(id);
+  
+  if (currentUserId !== requestedId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 px-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">

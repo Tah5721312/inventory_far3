@@ -120,7 +120,8 @@ export const {
     async jwt({ token, user }) {
       // JWT callback يتم استدعاؤه بشكل متكرر - لا نضع console logs هنا
       if (user) {
-        token.id = (user as any).id;
+        token.id = (user as any).id; // ✅ إضافة id للـ token
+        token.userId = (user as any).id;
         token.isAdmin = (user as any).isAdmin ?? false;
         token.roleId = (user as any).roleId ?? 0;
         token.isGuest = (user as any).isGuest ?? false;
@@ -135,12 +136,12 @@ export const {
     async session({ session, token }) {
       // Session callback يتم استدعاؤه بشكل متكرر - لا نضع console logs هنا
       session.user = {
-        id: String((token as any).id ?? ""),
+        id: String((token as any).id ?? (token as any).userId ?? ""),
+        userId: Number((token as any).userId ?? (token as any).id ?? 0),    //  ← إضافة userId في الجلسة أيضًا
         name: session.user?.name || "",
         email: session.user?.email || "",
         isAdmin: Boolean((token as any).isAdmin),
         roleId: Number((token as any).roleId ?? 0),
-        isGuest: Boolean((token as any).isGuest),
       } as any;
       
       return session;
