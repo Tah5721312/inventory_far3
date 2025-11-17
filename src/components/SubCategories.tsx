@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Pencil, Trash2, Plus, X, Search, Loader2, CheckCircle, AlertCircle, FolderTree } from 'lucide-react';
+import { DOMAIN } from '@/lib/constants';
 
 interface MainCategory {
   CAT_ID: number;
@@ -38,8 +39,8 @@ export default function SubCategoriesPage() {
     try {
       setLoading(true);
       const [subCatResponse, mainCatResponse] = await Promise.all([
-        fetch('/api/sub-categories'),
-        fetch('/api/main-categories')
+        fetch(`${DOMAIN}/api/sub-categories`),
+        fetch(`${DOMAIN}/api/main-categories`)
       ]);
       
       const subCatResult = await subCatResponse.json();
@@ -100,8 +101,8 @@ export default function SubCategoriesPage() {
     setSubmitting(true);
     try {
       const url = editingSubCategory
-        ? `/api/sub-categories/${editingSubCategory.SUB_CAT_ID}`
-        : '/api/sub-categories';
+        ? `${DOMAIN}/api/sub-categories/${editingSubCategory.SUB_CAT_ID}`
+        : `${DOMAIN}/api/sub-categories`;
 
       const body = {
         SUB_CAT_NAME: formData.SUB_CAT_NAME.trim(),
@@ -136,7 +137,7 @@ export default function SubCategoriesPage() {
     if (!confirm('هل أنت متأكد من حذف هذا التصنيف الفرعي؟')) return;
 
     try {
-      const response = await fetch(`/api/sub-categories/${id}`, {
+      const response = await fetch(`${DOMAIN}/api/sub-categories/${id}`, {
         method: 'DELETE',
       });
 

@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, X, Save, Filter, BarChart3, ArrowUpDown, ArrowUp, ArrowDown, FileText } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, Save, Filter, BarChart3, ArrowUpDown, ArrowUp, ArrowDown, FileText, History, Package, RefreshCcw, MoveRight } from 'lucide-react';
 import Link from 'next/link';
 import { escapeHtml } from '@/lib/security';
 import { Can } from '@/components/Can';
 import { utils, writeFileXLSX } from 'xlsx';
+import { DOMAIN } from '@/lib/constants';
 
 interface Item {
   ITEM_ID: number;
@@ -19,6 +20,9 @@ interface Item {
   IP?: string;
   COMP_NAME?: string;
   LOCK_NUM?: number;
+  QUANTITY?: number;
+  MIN_QUANTITY?: number;
+  UNIT?: string;
   USER_ID?: number;
   ASSIGNED_USER?: string;
   DEPT_ID?: number;
@@ -31,6 +35,37 @@ interface Item {
   MAIN_CATEGORY_NAME?: string;
   ITEM_TYPE_ID?: number;
   ITEM_TYPE_NAME?: string;
+}
+
+interface MovementType {
+  MOVEMENT_TYPE_ID: number;
+  TYPE_NAME: string;
+  TYPE_CODE: string;
+  EFFECT: number;
+  DESCRIPTION?: string;
+}
+
+interface InventoryMovement {
+  MOVEMENT_ID: number;
+  ITEM_ID: number;
+  ITEM_NAME?: string;
+  MOVEMENT_TYPE_ID: number;
+  MOVEMENT_TYPE?: string;
+  TYPE_CODE?: string;
+  QUANTITY: number;
+  PREVIOUS_QTY?: number;
+  NEW_QTY?: number;
+  MOVEMENT_DATE?: string;
+  USER_ID: number;
+  USER_NAME?: string;
+  USER_FULL_NAME?: string;
+  FROM_DEPT?: string;
+  TO_DEPT?: string;
+  FROM_FLOOR?: string;
+  TO_FLOOR?: string;
+  REFERENCE_NO?: string;
+  NOTES?: string;
+  CREATED_AT: string;
 }
 
 interface Category {
@@ -73,7 +108,35 @@ export default function ItemsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [formData, setFormData] = useState<Partial<Item>>({});
-
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [stockModalItem, setStockModalItem] = useState<Item | null>(null);
+  const [stockMovements, setStockMovements] = useState<InventoryMovement[]>([]);
+  const [movementTypes, setMovementTypes] = useState<MovementType[]>([]);
+  const [stockHistoryLoading, setStockHistoryLoading] = useState(false);
+  const [stockLoading, setStockLoading] = useState(false);
+  const [stockError, setStockError] = useState<string | null>(null);
+  const [stockForm, setStockForm] = useState<{ 
+    movementTypeId: string; 
+    quantity: string; 
+    unit: string;
+    referenceNo: string;
+    notes: string;
+    fromDeptId: string;
+    toDeptId: string;
+    fromFloorId: string;
+    toFloorId: string;
+  }>({
+    movementTypeId: '',
+    quantity: '',
+    unit: '',
+    referenceNo: '',
+    notes: '',
+    fromDeptId: '',
+    toDeptId: '',
+    fromFloorId: '',
+    toFloorId: '',
+  });
+  
   // Lookup data
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
@@ -114,7 +177,25 @@ export default function ItemsPage() {
   useEffect(() => {
     fetchItems();
     fetchLookupData();
+    fetchMovementTypes();
   }, []);
+
+  const fetchMovementTypes = async () => {
+    try {
+      const response = await fetch(`${DOMAIN}/api/movement-types`);
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) {
+        setMovementTypes(result.data);
+        // تعيين النوع الافتراضي (إدخال مخزون - ID = 1)
+        if (result.data.length > 0) {
+          const defaultType = result.data.find((t: MovementType) => t.TYPE_CODE === 'IN') || result.data[0];
+          setStockForm((prev) => ({ ...prev, movementTypeId: String(defaultType.MOVEMENT_TYPE_ID) }));
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching movement types:', error);
+    }
+  };
 
   useEffect(() => {
     if (formData.CAT_ID) {
@@ -171,15 +252,23 @@ export default function ItemsPage() {
     }
   }, [filters.deptId, users]);
 
+  useEffect(() => {
+    if (!stockModalItem) return;
+    const updated = items.find((item) => item.ITEM_ID === stockModalItem.ITEM_ID);
+    if (updated && updated !== stockModalItem) {
+      setStockModalItem(updated);
+    }
+  }, [items, stockModalItem]);
+
   const fetchLookupData = async () => {
     try {
       const [catsRes, subsRes, usersRes, typesRes, deptsRes, floorsRes] = await Promise.all([
-        fetch('/api/main-categories'),
-        fetch('/api/sub-categories'),
-        fetch('/api/users'),
-        fetch('/api/item-types'),
-        fetch('/api/departments'),
-        fetch('/api/floors'),
+        fetch(`${DOMAIN}/api/main-categories`),
+        fetch(`${DOMAIN}/api/sub-categories`),
+        fetch(`${DOMAIN}/api/users`),
+        fetch(`${DOMAIN}/api/item-types`),
+        fetch(`${DOMAIN}/api/departments`),
+        fetch(`${DOMAIN}/api/floors`),
       ]);
 
       const [catsData, subsData, usersData, typesData, deptsData, floorsData] = await Promise.all([
@@ -274,6 +363,51 @@ export default function ItemsPage() {
     }
   };
 
+  const getQuantityStatus = (quantity?: number, minQuantity?: number) => {
+    if (quantity === undefined || quantity === null) {
+      return {
+        label: 'غير محدد',
+        emoji: '❔',
+        className: 'bg-slate-100 text-slate-600 border border-slate-200',
+      };
+    }
+    if (quantity <= 0) {
+      return {
+        label: '❌ منتهي',
+        emoji: '❌',
+        className: 'bg-red-100 text-red-700 border border-red-200',
+      };
+    }
+    // استخدام MIN_QUANTITY إذا كان محدداً
+    if (minQuantity !== undefined && minQuantity !== null && minQuantity > 0) {
+      if (quantity <= minQuantity) {
+        return {
+          label: '⚠️ قليل',
+          emoji: '⚠️',
+          className: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
+        };
+      }
+      return {
+        label: '✅ متاح',
+        emoji: '✅',
+        className: 'bg-green-100 text-green-700 border border-green-200',
+      };
+    }
+    // استخدام القيم الافتراضية إذا لم يكن MIN_QUANTITY محدداً
+    if (quantity < 10) {
+      return {
+        label: '⚠️ قليل',
+        emoji: '⚠️',
+        className: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
+      };
+    }
+    return {
+      label: '✅ متاح',
+      emoji: '✅',
+      className: 'bg-green-100 text-green-700 border border-green-200',
+    };
+  };
+
   const fetchItems = async (customFilters?: typeof filters) => {
     try {
       setLoading(true);
@@ -295,7 +429,7 @@ export default function ItemsPage() {
       if (activeFilters.ip) queryParams.append('ip', activeFilters.ip);
       if (activeFilters.compName) queryParams.append('compName', activeFilters.compName);
 
-      const response = await fetch(`/api/items?${queryParams}`);
+      const response = await fetch(`${DOMAIN}/api/items?${queryParams}`);
       const result = await response.json();
       
       console.log('📥 API Response:', result);
@@ -326,6 +460,156 @@ export default function ItemsPage() {
       setItems([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStockMovementsData = async (itemId: number) => {
+    setStockHistoryLoading(true);
+    try {
+      const response = await fetch(`${DOMAIN}/api/stock-movements?itemId=${itemId}`);
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) {
+        setStockMovements(result.data);
+      } else {
+        setStockMovements([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching stock movements:', error);
+      setStockMovements([]);
+    } finally {
+      setStockHistoryLoading(false);
+    }
+  };
+
+  const openStockModal = (item: Item) => {
+    setStockModalItem(item);
+    setShowStockModal(true);
+    // تعيين النوع الافتراضي
+    const defaultType = movementTypes.find((t) => t.TYPE_CODE === 'IN') || movementTypes[0];
+    setStockForm({
+      movementTypeId: defaultType ? String(defaultType.MOVEMENT_TYPE_ID) : '',
+      quantity: '',
+      unit: item.UNIT || '',
+      referenceNo: '',
+      notes: '',
+      fromDeptId: '',
+      toDeptId: '',
+      fromFloorId: '',
+      toFloorId: '',
+    });
+    setStockError(null);
+    fetchStockMovementsData(item.ITEM_ID);
+  };
+
+  const closeStockModal = () => {
+    setShowStockModal(false);
+    setStockModalItem(null);
+    setStockMovements([]);
+    setStockError(null);
+  };
+
+  const handleStockSubmit = async () => {
+    if (!stockModalItem) return;
+
+    if (!stockForm.movementTypeId) {
+      setStockError('يجب اختيار نوع الحركة');
+      return;
+    }
+
+    const qtyNumber = Number(stockForm.quantity);
+    if (Number.isNaN(qtyNumber) || qtyNumber <= 0) {
+      setStockError('الكمية يجب أن تكون أكبر من صفر');
+      return;
+    }
+
+    setStockLoading(true);
+    setStockError(null);
+
+    try {
+      const response = await fetch(`${DOMAIN}/api/stock-movements`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          itemId: stockModalItem.ITEM_ID,
+          movementTypeId: Number(stockForm.movementTypeId),
+          unit: stockForm.unit?.trim() || stockModalItem?.UNIT || 'قطعة',
+          quantity: qtyNumber,
+          referenceNo: stockForm.referenceNo?.trim() || null,
+          notes: stockForm.notes?.trim() || null,
+          fromDeptId: stockForm.fromDeptId ? Number(stockForm.fromDeptId) : null,
+          toDeptId: stockForm.toDeptId ? Number(stockForm.toDeptId) : null,
+          fromFloorId: stockForm.fromFloorId ? Number(stockForm.fromFloorId) : null,
+          toFloorId: stockForm.toFloorId ? Number(stockForm.toFloorId) : null,
+        }),
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'فشل تنفيذ الحركة');
+      }
+
+      // إعادة تعيين النموذج
+      const defaultType = movementTypes.find((t) => t.TYPE_CODE === 'IN') || movementTypes[0];
+      setStockForm({
+        movementTypeId: defaultType ? String(defaultType.MOVEMENT_TYPE_ID) : '',
+        quantity: '',
+        unit: stockModalItem?.UNIT || '',
+        referenceNo: '',
+        notes: '',
+        fromDeptId: '',
+        toDeptId: '',
+        fromFloorId: '',
+        toFloorId: '',
+      });
+      await fetchStockMovementsData(stockModalItem.ITEM_ID);
+      await fetchItems();
+      // تحديث بيانات الصنف في الـ modal
+      const updatedItem = await fetch(`${DOMAIN}/api/items?id=${stockModalItem.ITEM_ID}`).then(r => r.json());
+      if (updatedItem.success && updatedItem.data) {
+        setStockModalItem(updatedItem.data);
+      }
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'فشل تنفيذ الحركة';
+      setStockError(errMsg);
+    } finally {
+      setStockLoading(false);
+    }
+  };
+
+  const handleDeleteMovement = async (movementId: number) => {
+    if (!confirm('هل أنت متأكد من حذف هذه الحركة؟ سيتم إعادة الكمية للقيمة السابقة.')) {
+      return;
+    }
+
+    if (!stockModalItem) return;
+
+    setStockLoading(true);
+    setStockError(null);
+
+    try {
+      const response = await fetch(`${DOMAIN}/api/stock-movements?movementId=${movementId}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'فشل حذف الحركة');
+      }
+
+      // تحديث قائمة الحركات
+      await fetchStockMovementsData(stockModalItem.ITEM_ID);
+      // تحديث قائمة الأصناف
+      await fetchItems();
+      // تحديث بيانات الصنف في الـ modal
+      const updatedItem = await fetch(`${DOMAIN}/api/items?id=${stockModalItem.ITEM_ID}`).then(r => r.json());
+      if (updatedItem.success && updatedItem.data) {
+        setStockModalItem(updatedItem.data);
+      }
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'فشل حذف الحركة';
+      setStockError(errMsg);
+    } finally {
+      setStockLoading(false);
     }
   };
 
@@ -391,7 +675,7 @@ export default function ItemsPage() {
       setFormData(formDataForItem);
     } else {
       setEditingItem(null);
-      setFormData({});
+      setFormData({ QUANTITY: 0 });
     }
     setShowModal(true);
   };
@@ -410,7 +694,7 @@ export default function ItemsPage() {
     const payload: any = { ...formData };
     const numericKeys = [
       'ITEM_TYPE_ID', 'CAT_ID', 'SUB_CAT_ID', 
-      'LOCK_NUM', 'DEPT_ID', 'FLOOR_ID',
+      'LOCK_NUM', 'DEPT_ID', 'FLOOR_ID', 'QUANTITY',
     ];
     
     // Handle numeric keys (except USER_ID which needs special handling)
@@ -447,11 +731,15 @@ export default function ItemsPage() {
     ];
     readOnlyKeys.forEach((k) => delete payload[k]);
 
+    if (editingItem) {
+      delete payload.QUANTITY;
+    }
+
     console.log('📤 Sending payload:', payload);
 
     try {
       if (editingItem) {
-        const response = await fetch('/api/items', {
+        const response = await fetch(`${DOMAIN}/api/items`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...payload, ITEM_ID: editingItem.ITEM_ID }),
@@ -464,7 +752,7 @@ export default function ItemsPage() {
           throw new Error(errorMsg);
         }
       } else {
-        const response = await fetch('/api/items', {
+        const response = await fetch(`${DOMAIN}/api/items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -492,7 +780,7 @@ export default function ItemsPage() {
     if (!confirm('هل أنت متأكد من الحذف؟')) return;
 
     try {
-      const response = await fetch(`/api/items?id=${id}`, {
+      const response = await fetch(`${DOMAIN}/api/items?id=${id}`, {
         method: 'DELETE',
       });
 
@@ -526,7 +814,8 @@ export default function ItemsPage() {
       'الحالة': item.SITUATION || '',
       'اسم الجهاز': item.COMP_NAME || '',
       'IP': item.IP || '',
-      'رقم القفل': item.LOCK_NUM ?? ''
+      'رقم القفل': item.LOCK_NUM ?? '',
+      'الكمية': item.QUANTITY ?? 0,
     }));
 
     const worksheet = utils.json_to_sheet(rows);
@@ -1108,231 +1397,240 @@ export default function ItemsPage() {
 
             {/* Desktop Table View */}
             <div className="hidden lg:block bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200/50 overflow-hidden w-full">
-              <div className="w-full">
-                <table className="w-full table-fixed" style={{ tableLayout: 'fixed' }}>
-                  <colgroup>
-                    <col style={{ width: '12%' }} />
-                    <col style={{ width: '8%' }} />
-                    <col style={{ width: '8%' }} />
-                    <col style={{ width: '7%' }} />
-                    <col style={{ width: '6%' }} />
-                    <col style={{ width: '8%' }} />
-                    <col style={{ width: '9%' }} />
-                    <col style={{ width: '8%' }} />
-                    <col style={{ width: '6%' }} />
-                    <col style={{ width: '8%' }} />
-                    <col style={{ width: '8%' }} />
-                    <col style={{ width: '7%' }} />
-                    <col style={{ width: '6%' }} />
-                    <col style={{ width: '5%' }} />
-                  </colgroup>
-                  <thead className="bg-gradient-to-r from-slate-50 to-slate-100 border-b-2 border-slate-200">
-                    <tr>
-                      <th 
-                        className="px-2 py-2.5 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors select-none relative group"
-                        onClick={() => handleSort('ITEM_NAME')}
-                        title="انقر للترتيب"
-                      >
-                        <div className="flex items-center justify-end gap-1.5">
-                          <span>اسم الصنف</span>
-                          {sortColumn === 'ITEM_NAME' ? (
-                            sortDirection === 'asc' ? (
-                              <ArrowUp size={16} className="text-blue-600" strokeWidth={2.5} />
-                            ) : (
-                              <ArrowDown size={16} className="text-blue-600" strokeWidth={2.5} />
-                            )
-                          ) : (
-                            <ArrowUpDown size={16} className="text-slate-500 opacity-70 group-hover:text-blue-600 group-hover:opacity-100 transition-colors" />
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="px-2 py-2.5 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors select-none relative group"
-                        onClick={() => handleSort('MAIN_CATEGORY_NAME')}
-                        title="انقر للترتيب"
-                      >
-                        <div className="flex items-center justify-end gap-1.5">
-                          <span>الرئيسي</span>
-                          {sortColumn === 'MAIN_CATEGORY_NAME' ? (
-                            sortDirection === 'asc' ? (
-                              <ArrowUp size={16} className="text-blue-600" strokeWidth={2.5} />
-                            ) : (
-                              <ArrowDown size={16} className="text-blue-600" strokeWidth={2.5} />
-                            )
-                          ) : (
-                            <ArrowUpDown size={16} className="text-slate-500 opacity-70 group-hover:text-blue-600 group-hover:opacity-100 transition-colors" />
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="px-2 py-2.5 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors select-none relative group"
-                        onClick={() => handleSort('SUB_CAT_NAME')}
-                        title="انقر للترتيب"
-                      >
-                        <div className="flex items-center justify-end gap-1.5">
-                          <span>الفرعي</span>
-                          {sortColumn === 'SUB_CAT_NAME' ? (
-                            sortDirection === 'asc' ? (
-                              <ArrowUp size={16} className="text-blue-600" strokeWidth={2.5} />
-                            ) : (
-                              <ArrowDown size={16} className="text-blue-600" strokeWidth={2.5} />
-                            )
-                          ) : (
-                            <ArrowUpDown size={16} className="text-slate-500 opacity-70 group-hover:text-blue-600 group-hover:opacity-100 transition-colors" />
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="px-2 py-2.5 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors select-none relative group"
-                        onClick={() => handleSort('ITEM_TYPE_NAME')}
-                        title="انقر للترتيب"
-                      >
-                        <div className="flex items-center justify-end gap-1.5">
-                          <span>نوع الصنف</span>
-                          {sortColumn === 'ITEM_TYPE_NAME' ? (
-                            sortDirection === 'asc' ? (
-                              <ArrowUp size={16} className="text-blue-600" strokeWidth={2.5} />
-                            ) : (
-                              <ArrowDown size={16} className="text-blue-600" strokeWidth={2.5} />
-                            )
-                          ) : (
-                            <ArrowUpDown size={16} className="text-slate-500 opacity-70 group-hover:text-blue-600 group-hover:opacity-100 transition-colors" />
-                          )}
-                        </div>
-                      </th>
-                      <th className="px-2 py-2 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider">النوع</th>
-                      <th className="px-2 py-2 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider">السيريال</th>
-                      <th className="px-2 py-2 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider">المستخدم</th>
-                      <th className="px-2 py-2 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider">القسم</th>
-                      <th className="px-2 py-2 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider">الطابق</th>
-                      <th className="px-2 py-2 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider">الحالة</th>
-                      <th className="px-2 py-2 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider">اسم الجهاز</th>
-                      <th className="px-2 py-2 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider">IP</th>
-                      <th className="px-2 py-2 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider">القفل</th>
-                      <th className="px-2 py-2 text-center text-[10px] font-bold text-slate-700 uppercase tracking-wider">الإجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {sortedItems.map((item) => (
-                      <tr key={item.ITEM_ID} className="hover:bg-blue-50/50 transition-colors duration-150 group">
-                        <td className="px-2 py-2">
-                          <div 
-                            className="text-[10px] font-semibold text-slate-900 truncate" 
-                            title={item.ITEM_NAME}
-                          >
-                            {item.ITEM_NAME || <span className="text-slate-400">-</span>}
-                          </div>
-                        </td>
-                        <td className="px-2 py-2 text-[10px] text-slate-600 truncate" title={item.MAIN_CATEGORY_NAME || ''}>
-                          {item.MAIN_CATEGORY_NAME || <span className="text-slate-400">-</span>}
-                        </td>
-                        <td className="px-2 py-2 text-[10px] text-slate-600 truncate" title={item.SUB_CAT_NAME || ''}>
-                          {item.SUB_CAT_NAME || <span className="text-slate-400">-</span>}
-                        </td>
-                        <td className="px-2 py-2">
-                          {item.ITEM_TYPE_NAME ? (
-                            <span className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 truncate" title={item.ITEM_TYPE_NAME}>
-                              {item.ITEM_TYPE_NAME}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-[10px]">-</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-2">
-                          {item.KIND ? (
-                            <span className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 truncate" title={item.KIND}>
-                              {item.KIND}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-[10px]">-</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-2 text-[10px] text-slate-600 font-mono truncate" title={item.SERIAL || ''}>
-                          {item.SERIAL || <span className="text-slate-400">-</span>}
-                        </td>
-                        <td className="px-2 py-2">
-                          {item.ASSIGNED_USER ? (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] text-slate-700 truncate" title={item.ASSIGNED_USER}>
-                              <span>👤</span>
-                              <span className="truncate">{item.ASSIGNED_USER}</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
-                              <span>📦</span>
-                              <span>المخزن</span>
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-2 py-2 text-[10px] text-slate-600 truncate" title={item.DEPT_NAME || ''}>
-                          {item.DEPT_NAME || <span className="text-slate-400">-</span>}
-                        </td>
-                        <td className="px-2 py-2 text-[10px] text-slate-600 truncate" title={item.FLOOR_NAME || ''}>
-                          {item.FLOOR_NAME || <span className="text-slate-400">-</span>}
-                        </td>
-                        <td className="px-2 py-2">
-                          {item.SITUATION ? (
-                            <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-semibold ${
-                              item.SITUATION === 'صالح' ? 'bg-green-100 text-green-700 border border-green-200' :
-                              item.SITUATION === 'عاطل' ? 'bg-red-100 text-red-700 border border-red-200' :
-                              item.SITUATION === 'تحت الإصلاح' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
-                              item.SITUATION === 'ورشة' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                              item.SITUATION === 'كهنة' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
-                              'bg-slate-100 text-slate-700 border border-slate-200'
-                            }`}>
-                              {item.SITUATION === 'صالح' && '🟢'}
-                              {item.SITUATION === 'عاطل' && '🔴'}
-                              {item.SITUATION === 'تحت الإصلاح' && '🟡'}
-                              {item.SITUATION === 'ورشة' && '🔧'}
-                              {item.SITUATION === 'كهنة' && '🛠️'}
-                              <span className="truncate">{item.SITUATION}</span>
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-[10px]">-</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-2 text-[10px] text-slate-600 truncate" title={item.COMP_NAME || ''}>
-                          {item.COMP_NAME || <span className="text-slate-400">-</span>}
-                        </td>
-                        <td className="px-2 py-2 text-[10px] text-slate-600 font-mono truncate" title={item.IP || ''}>
-                          {item.IP || <span className="text-slate-400">-</span>}
-                        </td>
-                        <td className="px-2 py-2">
-                          {item.LOCK_NUM ? (
-                            <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-                              🔒 {item.LOCK_NUM}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-[10px]">-</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="flex justify-center gap-1">
-                            <button
-                              onClick={() => openModal(item)}
-                              className="p-1 bg-amber-50 text-amber-600 rounded hover:bg-amber-100 hover:scale-110 transition-all duration-200 shadow-sm hover:shadow-md"
-                              title="تعديل"
-                            >
-                              <Edit2 size={12} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item.ITEM_ID)}
-                              className="p-1 bg-red-50 text-red-600 rounded hover:bg-red-100 hover:scale-110 transition-all duration-200 shadow-sm hover:shadow-md"
-                              title="حذف"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+  <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+    <table className="w-full min-w-[1400px]" style={{ tableLayout: 'fixed', width: '100%' }}>
+      <colgroup>
+        <col style={{ width: '14%' }} />
+        <col style={{ width: '10%' }} />
+        <col style={{ width: '10%' }} />
+        <col style={{ width: '10%' }} />
+        <col style={{ width: '7%' }} />
+        <col style={{ width: '10%' }} />
+        <col style={{ width: '10%' }} />
+        <col style={{ width: '9%' }} />
+        <col style={{ width: '9%' }} />
+        <col style={{ width: '10%' }} />
+        <col style={{ width: '9%' }} />
+        <col style={{ width: '7%' }} />
+        <col style={{ width: '8%' }} />
+      </colgroup>
+      <thead className="bg-gradient-to-r from-slate-50 to-slate-100 border-b-2 border-slate-200 sticky top-0 z-10">
+        <tr>
+          <th 
+            className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors select-none relative group"
+            onClick={() => handleSort('ITEM_NAME')}
+            title="انقر للترتيب"
+          >
+            <div className="flex items-center justify-end gap-1.5">
+              <span>اسم الصنف</span>
+              {sortColumn === 'ITEM_NAME' ? (
+                sortDirection === 'asc' ? (
+                  <ArrowUp size={14} className="text-blue-600" strokeWidth={2.5} />
+                ) : (
+                  <ArrowDown size={14} className="text-blue-600" strokeWidth={2.5} />
+                )
+              ) : (
+                <ArrowUpDown size={14} className="text-slate-500 opacity-70 group-hover:text-blue-600 group-hover:opacity-100 transition-colors" />
+              )}
             </div>
+          </th>
+          <th 
+            className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors select-none relative group"
+            onClick={() => handleSort('MAIN_CATEGORY_NAME')}
+            title="انقر للترتيب"
+          >
+            <div className="flex items-center justify-end gap-1.5">
+              <span>الرئيسي</span>
+              {sortColumn === 'MAIN_CATEGORY_NAME' ? (
+                sortDirection === 'asc' ? (
+                  <ArrowUp size={14} className="text-blue-600" strokeWidth={2.5} />
+                ) : (
+                  <ArrowDown size={14} className="text-blue-600" strokeWidth={2.5} />
+                )
+              ) : (
+                <ArrowUpDown size={14} className="text-slate-500 opacity-70 group-hover:text-blue-600 group-hover:opacity-100 transition-colors" />
+              )}
+            </div>
+          </th>
+          <th 
+            className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors select-none relative group"
+            onClick={() => handleSort('SUB_CAT_NAME')}
+            title="انقر للترتيب"
+          >
+            <div className="flex items-center justify-end gap-1.5">
+              <span>الفرعي</span>
+              {sortColumn === 'SUB_CAT_NAME' ? (
+                sortDirection === 'asc' ? (
+                  <ArrowUp size={14} className="text-blue-600" strokeWidth={2.5} />
+                ) : (
+                  <ArrowDown size={14} className="text-blue-600" strokeWidth={2.5} />
+                )
+              ) : (
+                <ArrowUpDown size={14} className="text-slate-500 opacity-70 group-hover:text-blue-600 group-hover:opacity-100 transition-colors" />
+              )}
+            </div>
+          </th>
+          <th 
+            className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors select-none relative group"
+            onClick={() => handleSort('ITEM_TYPE_NAME')}
+            title="انقر للترتيب"
+          >
+            <div className="flex items-center justify-end gap-1.5">
+              <span>نوع الصنف</span>
+              {sortColumn === 'ITEM_TYPE_NAME' ? (
+                sortDirection === 'asc' ? (
+                  <ArrowUp size={14} className="text-blue-600" strokeWidth={2.5} />
+                ) : (
+                  <ArrowDown size={14} className="text-blue-600" strokeWidth={2.5} />
+                )
+              ) : (
+                <ArrowUpDown size={14} className="text-slate-500 opacity-70 group-hover:text-blue-600 group-hover:opacity-100 transition-colors" />
+              )}
+            </div>
+          </th>
+          <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">النوع</th>
+          <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">السيريال</th>
+          <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">المستخدم</th>
+          <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">القسم</th>
+          <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">الحالة</th>
+          <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">اسم الجهاز</th>
+          <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">IP</th>
+          <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">الكمية</th>
+          <th className="px-3 py-3 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-slate-100">
+        {sortedItems.map((item) => {
+          const quantityStatus = getQuantityStatus(item.QUANTITY, item.MIN_QUANTITY);
+          return (
+            <tr key={item.ITEM_ID} className="hover:bg-blue-50/50 transition-colors duration-150 group">
+              <td className="px-3 py-3 align-top">
+                <div 
+                  className="text-sm font-semibold text-slate-900 break-words whitespace-normal" 
+                  title={item.ITEM_NAME}
+                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                >
+                  {item.ITEM_NAME || <span className="text-slate-400">-</span>}
+                </div>
+              </td>
+              <td className="px-3 py-3 text-sm text-slate-600 break-words whitespace-normal align-top" title={item.MAIN_CATEGORY_NAME || ''} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                {item.MAIN_CATEGORY_NAME || <span className="text-slate-400">-</span>}
+              </td>
+              <td className="px-3 py-3 text-sm text-slate-600 break-words whitespace-normal align-top" title={item.SUB_CAT_NAME || ''} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                {item.SUB_CAT_NAME || <span className="text-slate-400">-</span>}
+              </td>
+              <td className="px-3 py-3 align-top">
+                {item.ITEM_TYPE_NAME ? (
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 break-words whitespace-normal" title={item.ITEM_TYPE_NAME} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    {item.ITEM_TYPE_NAME}
+                  </span>
+                ) : (
+                  <span className="text-slate-400 text-sm">-</span>
+                )}
+              </td>
+              <td className="px-3 py-3 align-top">
+                {item.KIND ? (
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 break-words whitespace-normal" title={item.KIND} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    {item.KIND}
+                  </span>
+                ) : (
+                  <span className="text-slate-400 text-sm">-</span>
+                )}
+              </td>
+              <td className="px-3 py-3 text-sm text-slate-600 font-mono break-words whitespace-normal align-top" title={item.SERIAL || ''} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                {item.SERIAL || <span className="text-slate-400">-</span>}
+              </td>
+              <td className="px-3 py-3 align-top">
+                {item.ASSIGNED_USER ? (
+                  <span className="inline-flex items-center gap-1 text-sm text-slate-700 break-words whitespace-normal" title={item.ASSIGNED_USER} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    <span>👤</span>
+                    <span>{item.ASSIGNED_USER}</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-600">
+                    <span>📦</span>
+                    <span>المخزن</span>
+                  </span>
+                )}
+              </td>
+              <td className="px-3 py-3 text-sm text-slate-600 break-words whitespace-normal align-top" title={item.DEPT_NAME || ''} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                {item.DEPT_NAME || <span className="text-slate-400">-</span>}
+              </td>
+              <td className="px-3 py-3 align-top">
+                {item.SITUATION ? (
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold break-words whitespace-normal ${
+                    item.SITUATION === 'صالح' ? 'bg-green-100 text-green-700 border border-green-200' :
+                    item.SITUATION === 'عاطل' ? 'bg-red-100 text-red-700 border border-red-200' :
+                    item.SITUATION === 'تحت الإصلاح' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                    item.SITUATION === 'ورشة' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                    item.SITUATION === 'كهنة' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                    'bg-slate-100 text-slate-700 border border-slate-200'
+                  }`} title={item.SITUATION} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    {item.SITUATION === 'صالح' && '🟢'}
+                    {item.SITUATION === 'عاطل' && '🔴'}
+                    {item.SITUATION === 'تحت الإصلاح' && '🟡'}
+                    {item.SITUATION === 'ورشة' && '🔧'}
+                    {item.SITUATION === 'كهنة' && '🛠️'}
+                    <span>{item.SITUATION}</span>
+                  </span>
+                ) : (
+                  <span className="text-slate-400 text-sm">-</span>
+                )}
+              </td>
+              <td className="px-3 py-3 text-sm text-slate-600 break-words whitespace-normal align-top" title={item.COMP_NAME || ''} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                {item.COMP_NAME || <span className="text-slate-400">-</span>}
+              </td>
+              <td className="px-3 py-3 text-sm text-slate-600 font-mono break-words whitespace-normal align-top" title={item.IP || ''} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                {item.IP || <span className="text-slate-400">-</span>}
+              </td>
+              <td className="px-3 py-3 align-top">
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-sm font-bold text-slate-900">{item.QUANTITY ?? 0}</span>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold border ${quantityStatus.className}`}
+                  >
+                    {quantityStatus.label}
+                  </span>
+                </div>
+              </td>
+              <td className="px-3 py-3 align-top">
+                <div className="flex justify-center gap-2">
+                  <button
+                    onClick={() => openStockModal(item)}
+                    className="p-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 hover:scale-110 transition-all duration-200 shadow-sm hover:shadow-md"
+                    title="حركات المخزون"
+                  >
+                    <History size={14} />
+                  </button>
+                  <button
+                    onClick={() => openModal(item)}
+                    className="p-1.5 bg-amber-50 text-amber-600 rounded hover:bg-amber-100 hover:scale-110 transition-all duration-200 shadow-sm hover:shadow-md"
+                    title="تعديل"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.ITEM_ID)}
+                    className="p-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 hover:scale-110 transition-all duration-200 shadow-sm hover:shadow-md"
+                    title="حذف"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+</div>
 
             {/* Mobile/Tablet Card View */}
             <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {sortedItems.map((item) => (
+              {sortedItems.map((item) => {
+                const quantityStatus = getQuantityStatus(item.QUANTITY);
+                return (
                 <div key={item.ITEM_ID} className="bg-white rounded-2xl shadow-lg border border-slate-200/50 p-5 hover:shadow-xl transition-all duration-200">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 min-w-0">
@@ -1357,6 +1655,13 @@ export default function ItemsPage() {
                       )}
                     </div>
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => openStockModal(item)}
+                        className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all"
+                        title="حركات المخزون"
+                      >
+                        <History size={18} />
+                      </button>
                       <button
                         onClick={() => openModal(item)}
                         className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-all"
@@ -1403,6 +1708,15 @@ export default function ItemsPage() {
                         </span>
                       </div>
                     )}
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <span className="font-medium w-24">الكمية:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900">{item.QUANTITY ?? 0}</span>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold border ${quantityStatus.className}`}>
+                          {quantityStatus.label}
+                        </span>
+                      </div>
+                    </div>
                     {item.SERIAL && (
                       <div className="flex items-center gap-2 text-sm text-slate-600">
                         <span className="font-medium w-24">السيريال:</span>
@@ -1477,7 +1791,8 @@ export default function ItemsPage() {
                     )}
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </>
         )}
@@ -1597,6 +1912,84 @@ export default function ItemsPage() {
                             </option>
                           ))}
                         </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          الكمية في المخزون
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={
+                            formData.QUANTITY === undefined || formData.QUANTITY === null
+                              ? ''
+                              : formData.QUANTITY
+                          }
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              QUANTITY: e.target.value === '' ? undefined : Number(e.target.value),
+                            })
+                          }
+                          disabled={Boolean(editingItem)}
+                          className={`w-full px-10 py-3 border-2 rounded-xl focus:ring-4 transition-all duration-200 ${
+                            editingItem
+                              ? 'border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed'
+                              : 'border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500/20 focus:bg-white'
+                          }`}
+                          placeholder="0"
+                        />
+                        {editingItem ? (
+                          <p className="text-xs text-slate-400 mt-1">
+                            استخدم زر حركات المخزون لتعديل الكمية الحالية ({formData.QUANTITY ?? 0})
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-400 mt-1">يمكنك تحديد الكمية الابتدائية للصنف</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          الحد الأدنى للكمية
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={
+                            formData.MIN_QUANTITY === undefined || formData.MIN_QUANTITY === null
+                              ? ''
+                              : formData.MIN_QUANTITY
+                          }
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              MIN_QUANTITY: e.target.value === '' ? undefined : Number(e.target.value),
+                            })
+                          }
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white"
+                          placeholder="0"
+                        />
+                        <p className="text-xs text-slate-400 mt-1">سيتم التنبيه عند وصول الكمية لهذا الحد</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2.5">
+                          وحدة القياس
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.UNIT || ''}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              UNIT: e.target.value || undefined,
+                            })
+                          }
+                          className="w-full px-10 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 bg-slate-50 focus:bg-white"
+                          placeholder="قطعة"
+                        />
+                        <p className="text-xs text-slate-400 mt-1">مثال: قطعة، كرتونة، وحدة، إلخ</p>
                       </div>
 
                     </div>
@@ -1798,6 +2191,321 @@ export default function ItemsPage() {
                 </div>
               </div>
             </div>
+          </div>
+       
+       )}
+
+        {showStockModal && stockModalItem && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 md:p-6 z-50"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                closeStockModal();
+              }
+            }}
+          >
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
+              <div className="bg-gradient-to-r from-emerald-600 to-sky-600 text-white px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-white/80">حركات المخزون</p>
+                  <h3 className="text-xl font-bold mt-1">{stockModalItem.ITEM_NAME}</h3>
+                  <div className="flex items-center gap-3 mt-3">
+                    <span className="text-lg font-semibold flex items-center gap-1">
+                      <Package size={18} />
+                      {stockModalItem.QUANTITY ?? 0} {stockModalItem.UNIT || 'قطعة'}
+                    </span>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${getQuantityStatus(stockModalItem.QUANTITY, stockModalItem.MIN_QUANTITY).className}`}>
+                      {getQuantityStatus(stockModalItem.QUANTITY, stockModalItem.MIN_QUANTITY).label}
+                    </span>
+                    {stockModalItem.MIN_QUANTITY !== undefined && stockModalItem.MIN_QUANTITY > 0 && (
+                      <span className="text-xs text-white/80">
+                        (الحد الأدنى: {stockModalItem.MIN_QUANTITY})
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={closeStockModal}
+                  className="p-2 rounded-lg hover:bg-white/20 transition-colors"
+                  aria-label="إغلاق"
+                >
+                  <X size={22} className="text-white" />
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-6 overflow-y-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold text-slate-800">تسجيل حركة جديدة</h4>
+                      <button
+                        onClick={() => fetchStockMovementsData(stockModalItem.ITEM_ID)}
+                        className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+                        title="تحديث السجل"
+                      >
+                        <RefreshCcw size={14} />
+                        تحديث
+                      </button>
+                    </div>
+
+                    {stockError && (
+                      <div className="mb-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                        {stockError}
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">نوع الحركة *</label>
+                        <select
+                          value={stockForm.movementTypeId}
+                          onChange={(e) => setStockForm((prev) => ({ ...prev, movementTypeId: e.target.value }))}
+                          className="w-full px-8 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all bg-white cursor-pointer"
+                        >
+                          <option value="">اختر نوع الحركة</option>
+                          {movementTypes.map((type) => (
+                            <option key={type.MOVEMENT_TYPE_ID} value={type.MOVEMENT_TYPE_ID}>
+                              {type.TYPE_NAME} ({type.TYPE_CODE})
+                              {type.DESCRIPTION && ` - ${type.DESCRIPTION}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">الكمية *</label>
+                        <input
+                          type="number"
+                          min={1}
+                          step="1"
+                          value={stockForm.quantity}
+                          onChange={(e) => setStockForm((prev) => ({ ...prev, quantity: e.target.value }))}
+                          className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all"
+                          placeholder="أدخل الكمية"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">
+                          الوحدة: <span className="font-semibold text-slate-700">{stockModalItem?.UNIT || 'قطعة'}</span>
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2"> نوع الكمية </label>
+                        <input
+                          type="text"
+                          value={stockForm.unit}
+                          onChange={(e) => setStockForm((prev) => ({ ...prev, unit: e.target.value }))}
+                          className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all"
+                          placeholder="قطعة، كرتونة، وحدة"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">رقم المرجع</label>
+                        <input
+                          type="text"
+                          value={stockForm.referenceNo}
+                          onChange={(e) => setStockForm((prev) => ({ ...prev, referenceNo: e.target.value }))}
+                          className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all"
+                          placeholder="مثال: PO-2024-001, REQ-2024-001"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-semibold text-slate-700 mb-2">من قسم</label>
+                          <select
+                            value={stockForm.fromDeptId}
+                            onChange={(e) => setStockForm((prev) => ({ ...prev, fromDeptId: e.target.value }))}
+                            className="w-full px-6 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all bg-white cursor-pointer text-sm"
+                          >
+                            <option value="">اختر القسم</option>
+                            {departments.map((dept) => (
+                              <option key={dept.DEPT_ID} value={dept.DEPT_ID}>
+                                {dept.DEPT_NAME}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-slate-700 mb-2">إلى قسم</label>
+                          <select
+                            value={stockForm.toDeptId}
+                            onChange={(e) => setStockForm((prev) => ({ ...prev, toDeptId: e.target.value }))}
+                            className="w-full px-6 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all bg-white cursor-pointer text-sm"
+                          >
+                            <option value="">اختر القسم</option>
+                            {departments.map((dept) => (
+                              <option key={dept.DEPT_ID} value={dept.DEPT_ID}>
+                                {dept.DEPT_NAME}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-semibold text-slate-700 mb-2">من طابق</label>
+                          <select
+                            value={stockForm.fromFloorId}
+                            onChange={(e) => setStockForm((prev) => ({ ...prev, fromFloorId: e.target.value }))}
+                            className="w-full px-6 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all bg-white cursor-pointer text-sm"
+                          >
+                            <option value="">اختر الطابق</option>
+                            {floors.map((floor) => (
+                              <option key={floor.FLOOR_ID} value={floor.FLOOR_ID}>
+                                {floor.FLOOR_NAME}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-slate-700 mb-2">إلى طابق</label>
+                          <select
+                            value={stockForm.toFloorId}
+                            onChange={(e) => setStockForm((prev) => ({ ...prev, toFloorId: e.target.value }))}
+                            className="w-full px-6 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all bg-white cursor-pointer text-sm"
+                          >
+                            <option value="">اختر الطابق</option>
+                            {floors.map((floor) => (
+                              <option key={floor.FLOOR_ID} value={floor.FLOOR_ID}>
+                                {floor.FLOOR_NAME}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">ملاحظات</label>
+                        <textarea
+                          value={stockForm.notes}
+                          onChange={(e) => setStockForm((prev) => ({ ...prev, notes: e.target.value }))}
+                          className="w-full min-h-[90px] px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all resize-none"
+                          placeholder="سبب الحركة، القسم المستلم، رقم الفاتورة..."
+                        />
+                      </div>
+
+                      <button
+                        onClick={handleStockSubmit}
+                        disabled={stockLoading}
+                        className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl font-semibold shadow-lg transition-all disabled:opacity-60"
+                      >
+                        {stockLoading ? (
+                          <>
+                            <span className="h-4 w-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                            جاري التنفيذ...
+                          </>
+                        ) : (
+                          <>
+                            <Save size={18} />
+                            حفظ الحركة
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold text-slate-800">سجل آخر الحركات</h4>
+                      <span className="text-xs text-slate-500">
+                        إجمالي السجل: {stockMovements.length} حركة
+                      </span>
+                    </div>
+
+                    {stockHistoryLoading ? (
+                      <div className="flex flex-col items-center justify-center py-10 text-slate-500">
+                        <div className="h-10 w-10 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin mb-3" />
+                        جاري تحميل السجل...
+                      </div>
+                    ) : stockMovements.length === 0 ? (
+                      <div className="text-center py-10 text-slate-500">
+                        لا توجد حركات مسجلة بعد
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                        {stockMovements.map((movement) => {
+                          const movementType = movementTypes.find(t => t.MOVEMENT_TYPE_ID === movement.MOVEMENT_TYPE_ID);
+                          const isIncrease = movementType?.EFFECT === 1;
+                          const isDecrease = movementType?.EFFECT === -1;
+                          const isAdjustment = movementType?.TYPE_CODE === 'ADJUSTMENT';
+                          return (
+                          <div
+                            key={movement.MOVEMENT_ID}
+                            className="border border-slate-200 rounded-xl p-3 hover:border-blue-200 transition-colors relative"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                    isIncrease
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                      : isDecrease
+                                      ? 'bg-rose-50 text-rose-700 border border-rose-100'
+                                      : 'bg-blue-50 text-blue-700 border border-blue-100'
+                                  }`}
+                                >
+                                  {movement.MOVEMENT_TYPE || movement.TYPE_CODE || 'غير محدد'}
+                                </span>
+                                <span className="text-sm font-bold text-slate-900">
+                                  {movement.QUANTITY} {stockModalItem?.UNIT || 'قطعة'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-500">
+                                  {movement.MOVEMENT_DATE || movement.CREATED_AT
+                                    ? new Date(movement.MOVEMENT_DATE || movement.CREATED_AT).toLocaleString('ar-EG')
+                                    : ''}
+                                </span>
+                                <button
+                                  onClick={() => handleDeleteMovement(movement.MOVEMENT_ID)}
+                                  disabled={stockLoading}
+                                  className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 hover:scale-110 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="حذف الحركة"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="text-xs text-slate-500 mb-2">
+                              {movement.PREVIOUS_QTY ?? 0} → {movement.NEW_QTY ?? 0}
+                            </div>
+                            {movement.REFERENCE_NO && (
+                              <div className="text-xs text-slate-600 mb-1">
+                                <span className="font-semibold">رقم المرجع:</span> {movement.REFERENCE_NO}
+                              </div>
+                            )}
+                            {(movement.FROM_DEPT || movement.TO_DEPT) && (
+                              <div className="text-xs text-slate-600 mb-1">
+                                {movement.FROM_DEPT && <span>من: {movement.FROM_DEPT}</span>}
+                                {movement.FROM_DEPT && movement.TO_DEPT && <span> → </span>}
+                                {movement.TO_DEPT && <span>إلى: {movement.TO_DEPT}</span>}
+                              </div>
+                            )}
+                            {(movement.FROM_FLOOR || movement.TO_FLOOR) && (
+                              <div className="text-xs text-slate-600 mb-1">
+                                {movement.FROM_FLOOR && <span>من طابق: {movement.FROM_FLOOR}</span>}
+                                {movement.FROM_FLOOR && movement.TO_FLOOR && <span> → </span>}
+                                {movement.TO_FLOOR && <span>إلى طابق: {movement.TO_FLOOR}</span>}
+                              </div>
+                            )}
+                            {movement.NOTES && (
+                              <p className="text-sm text-slate-700 mb-2">{movement.NOTES}</p>
+                            )}
+                            <div className="text-xs text-slate-500 flex items-center gap-2">
+                              بواسطة: {movement.USER_FULL_NAME || movement.USER_NAME || movement.USER_ID}
+                            </div>
+                          </div>
+                        );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+        
           </div>
         )}
       </div>

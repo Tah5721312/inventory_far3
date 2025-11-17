@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Pencil, Trash2, Plus, Search, Building2, Award, Building } from 'lucide-react';
+import { DOMAIN } from '@/lib/constants';
 
 interface Department {
   DEPT_ID: number;
@@ -64,7 +65,7 @@ export default function UnifiedManagementPage() {
   const fetchDepartments = async () => {
     try {
       setDeptLoading(true);
-      const res = await fetch('/api/departments');
+      const res = await fetch(`${DOMAIN}/api/departments`);
       const data = await res.json();
       
       // ✅ التعامل مع البيانات بشكل صحيح - إذا كانت المصفوفة فارغة، نضعها فارغة بدون إظهار خطأ
@@ -92,7 +93,7 @@ export default function UnifiedManagementPage() {
     setDeptSubmitting(true);
     setDeptError(null);
     try {
-      const url = editingDept ? `/api/departments/${editingDept.DEPT_ID}` : '/api/departments';
+      const url = editingDept ? `${DOMAIN}/api/departments/${editingDept.DEPT_ID}` : `${DOMAIN}/api/departments`;
       const method = editingDept ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
@@ -119,7 +120,7 @@ export default function UnifiedManagementPage() {
   const handleDeptDelete = async (id: number) => {
     if (!confirm('هل أنت متأكد من حذف هذا القسم؟')) return;
     try {
-      const res = await fetch(`/api/departments/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${DOMAIN}/api/departments/${id}`, { method: 'DELETE' });
       if (res.ok) await fetchDepartments();
     } catch (error) {
       console.error('Error deleting:', error);
@@ -149,7 +150,7 @@ export default function UnifiedManagementPage() {
   const fetchRanks = async () => {
     try {
       setRankLoading(true);
-      const res = await fetch('/api/ranks');
+      const res = await fetch(`${DOMAIN}/api/ranks`);
       const data = await res.json();
       
       // ✅ التعامل مع البيانات بشكل صحيح - إذا كانت المصفوفة فارغة، نضعها فارغة بدون إظهار خطأ
@@ -177,7 +178,7 @@ export default function UnifiedManagementPage() {
     setRankSubmitting(true);
     setRankError(null);
     try {
-      const url = editingRank ? `/api/ranks/${editingRank.RANK_ID}` : '/api/ranks';
+      const url = editingRank ? `${DOMAIN}/api/ranks/${editingRank.RANK_ID}` : `${DOMAIN}/api/ranks`;
       const method = editingRank ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
@@ -204,7 +205,7 @@ export default function UnifiedManagementPage() {
   const handleRankDelete = async (id: number) => {
     if (!confirm('هل أنت متأكد من حذف هذه الرتبة؟')) return;
     try {
-      const res = await fetch(`/api/ranks/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${DOMAIN}/api/ranks/${id}`, { method: 'DELETE' });
       if (res.ok) await fetchRanks();
     } catch (error) {
       console.error('Error deleting:', error);
@@ -234,7 +235,7 @@ export default function UnifiedManagementPage() {
   const fetchFloors = async () => {
     try {
       setFloorLoading(true);
-      const res = await fetch('/api/floors');
+      const res = await fetch(`${DOMAIN}/api/floors`);
       const data = await res.json();
       
       // ✅ التعامل مع البيانات بشكل صحيح - إذا كانت المصفوفة فارغة، نضعها فارغة بدون إظهار خطأ
@@ -262,7 +263,7 @@ export default function UnifiedManagementPage() {
     setFloorSubmitting(true);
     setFloorError(null);
     try {
-      const url = editingFloor ? `/api/floors/${editingFloor.FLOOR_ID}` : '/api/floors';
+      const url = editingFloor ? `${DOMAIN}/api/floors/${editingFloor.FLOOR_ID}` : `${DOMAIN}/api/floors`;
       const method = editingFloor ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
@@ -289,7 +290,7 @@ export default function UnifiedManagementPage() {
   const handleFloorDelete = async (id: number) => {
     if (!confirm('هل أنت متأكد من حذف هذا الطابق؟')) return;
     try {
-      const res = await fetch(`/api/floors/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${DOMAIN}/api/floors/${id}`, { method: 'DELETE' });
       if (res.ok) await fetchFloors();
     } catch (error) {
       console.error('Error deleting:', error);

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Pencil, Trash2, Plus, X, Search, Loader2, CheckCircle, AlertCircle, Users, Mail, Phone, Building2, Award, Building, Shield, Lock } from 'lucide-react';
+import { DOMAIN } from '@/lib/constants';
 
 interface Permission {
   SUBJECT: string;
@@ -85,7 +86,7 @@ export default function UsersPageContent() {
       
       // Fetch users
       try {
-        const usersResponse = await fetch('/api/users');
+        const usersResponse = await fetch(`${DOMAIN}/api/users`);
         const usersResult = await usersResponse.json();
         
         // ✅ التعامل مع البيانات بشكل صحيح - إذا كانت المصفوفة فارغة، نضعها فارغة بدون إظهار خطأ
@@ -122,7 +123,7 @@ export default function UsersPageContent() {
 
       // Fetch departments
       try {
-        const departmentsResponse = await fetch('/api/departments');
+        const departmentsResponse = await fetch(`${DOMAIN}/api/departments`);
         const departmentsResult = await departmentsResponse.json();
         
         if (Array.isArray(departmentsResult.data)) {
@@ -139,7 +140,7 @@ export default function UsersPageContent() {
 
       // Fetch ranks
       try {
-        const ranksResponse = await fetch('/api/ranks');
+        const ranksResponse = await fetch(`${DOMAIN}/api/ranks`);
         const ranksResult = await ranksResponse.json();
         
         if (Array.isArray(ranksResult.data)) {
@@ -156,7 +157,7 @@ export default function UsersPageContent() {
 
       // Fetch floors
       try {
-        const floorsResponse = await fetch('/api/floors');
+        const floorsResponse = await fetch(`${DOMAIN}/api/floors`);
         const floorsResult = await floorsResponse.json();
         
         if (Array.isArray(floorsResult.data)) {
@@ -261,7 +262,7 @@ export default function UsersPageContent() {
     try {
       if (editingUser) {
         // Update user - API expects: username, email, fullName, roleId (and optional: phone, deptId, rankId, floorId, isActive)
-        const url = `/api/users/${editingUser.USER_ID}`;
+        const url = `${DOMAIN}/api/users/${editingUser.USER_ID}`;
         const body: any = {
           username: formData.username.trim(),
           email: formData.email.trim(),
@@ -305,7 +306,7 @@ export default function UsersPageContent() {
         }
       } else {
         // Create user - API expects: username, email, fullName, password, roleId (and optional: phone, deptId, rankId, floorId, isActive)
-        const url = '/api/users';
+        const url = `${DOMAIN}/api/users`;
         const body: any = {
           username: formData.username.trim(),
           email: formData.email.trim(),
@@ -362,7 +363,7 @@ export default function UsersPageContent() {
     if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) return;
 
     try {
-      const response = await fetch(`/api/users/${userId}`, {
+      const response = await fetch(`${DOMAIN}/api/users/${userId}`, {
         method: 'DELETE',
       });
 

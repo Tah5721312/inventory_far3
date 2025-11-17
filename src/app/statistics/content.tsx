@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Printer, BarChart3, RefreshCw, ArrowRight, Home, FileText } from 'lucide-react';
+import { Printer, BarChart3, RefreshCw, Home, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { escapeHtml } from '@/lib/security';
+import { Can } from '@/components/Can';
+import { utils, writeFileXLSX } from 'xlsx';
+import { DOMAIN } from '@/lib/constants';
 
 interface Statistics {
   mainCategories: Array<{ CAT_ID: number; CAT_NAME: string; ITEM_COUNT: number }>;
@@ -24,18 +27,45 @@ interface Statistics {
   users: Array<{ USER_ID: number; USER_NAME: string; ITEM_COUNT: number }>;
   warehouse: { ITEM_COUNT: number };
   totalItems: { TOTAL_COUNT: number };
+  stockStats?: {
+    TOTAL_ITEMS: number;
+    TOTAL_QUANTITY: number;
+    LOW_STOCK_COUNT: number;
+    OUT_OF_STOCK_COUNT: number;
+    IN_STOCK_COUNT: number;
+  };
+  movementsStats?: {
+    TOTAL_MOVEMENTS: number;
+    TOTAL_IN: number;
+    TOTAL_OUT: number;
+    ITEMS_WITH_MOVEMENTS: number;
+    USERS_WITH_MOVEMENTS: number;
+  };
+  movementTypesStats?: Array<{
+    MOVEMENT_TYPE_ID: number;
+    TYPE_NAME: string;
+    TYPE_CODE: string;
+    MOVEMENT_COUNT: number;
+    TOTAL_QUANTITY: number;
+  }>;
+  lowStockItems?: Array<{
+    ITEM_ID: number;
+    ITEM_NAME: string;
+    QUANTITY: number;
+    MIN_QUANTITY: number;
+    UNIT: string;
+    SHORTAGE_QTY: number;
+  }>;
 }
 
 export default function StatisticsPageContent() {
   const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchStatistics = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const response = await fetch('/api/statistics');
+      const response = await fetch(`${DOMAIN}/api/statistics`);
       const data = await response.json();
       
       // ✅ التعامل مع البيانات بشكل صحيح - إذا كانت البيانات فارغة أو حدث خطأ، نضع statistics إلى null
@@ -44,17 +74,14 @@ export default function StatisticsPageContent() {
       } else if (data.success === false && data.error) {
         // خطأ من السيرفر - نضع statistics إلى null، سيتم عرض "لا يوجد بيانات" تلقائياً
         setStatistics(null);
-        setError(null); // لا نعرض رسالة خطأ، فقط نضع البيانات فارغة
       } else {
         // استجابة غير متوقعة - نضع statistics إلى null
         setStatistics(null);
-        setError(null);
       }
-    } catch (err) {
-      // في حالة catch، نضع statistics إلى null بدون إظهار console.error أو setError
+    } catch (_err) {
+      // في حالة catch، نضع statistics إلى null بدون إظهار console.error
       // سيتم عرض "لا يوجد بيانات" تلقائياً
       setStatistics(null);
-      setError(null);
     } finally {
       setLoading(false);
     }
@@ -67,6 +94,38 @@ export default function StatisticsPageContent() {
   const handlePrint = () => {
     // طباعة الصفحة كـ PDF
     window.print();
+  };
+
+  const handleExportItemsExcel = () => {
+    if (!statistics || !statistics.mainCategories || statistics.mainCategories.length === 0) {
+      alert('لا توجد تصنيفات رئيسية للتصدير');
+      return;
+    }
+
+    // تحويل التصنيفات الرئيسية إلى صفوف Excel
+    const rows = statistics.mainCategories.map((cat, index) => ({
+      '#': index + 1,
+      'اسم التصنيف الرئيسي': cat.CAT_NAME || '',
+      'العدد': cat.ITEM_COUNT || 0,
+    }));
+
+    // إنشاء ورقة عمل
+    const worksheet = utils.json_to_sheet(rows);
+    
+    // ضبط عرض الأعمدة
+    worksheet['!cols'] = [
+      { wch: 5 },   // #
+      { wch: 30 },  // اسم التصنيف الرئيسي
+      { wch: 10 },  // العدد
+    ];
+
+    // إنشاء مصنف جديد
+    const workbook = utils.book_new();
+    utils.book_append_sheet(workbook, worksheet, 'التصنيفات الرئيسية');
+
+    // تصدير الملف
+    const fileName = `التصنيفات_الرئيسية_${new Date().toISOString().split('T')[0]}.xlsx`;
+    writeFileXLSX(workbook, fileName);
   };
 
   const handleExportMainCategoriesPDF = () => {
@@ -462,7 +521,7 @@ export default function StatisticsPageContent() {
 
         {/* Total Summary Card */}
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 mb-6 print:rounded-lg print:shadow-md">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
               <div className="text-3xl font-bold text-blue-600">{statistics.totalItems?.TOTAL_COUNT || 0}</div>
               <div className="text-sm text-slate-600 mt-1">إجمالي الأصناف</div>
@@ -478,6 +537,50 @@ export default function StatisticsPageContent() {
               <div className="text-sm text-slate-600 mt-1">مخصصة للمستخدمين</div>
             </div>
           </div>
+
+          {/* Stock Statistics */}
+          {statistics.stockStats && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-200">
+              <div className="p-3 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200">
+                <div className="text-2xl font-bold text-emerald-600">{statistics.stockStats.TOTAL_QUANTITY || 0}</div>
+                <div className="text-xs text-slate-600 mt-1">إجمالي الكمية</div>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl border border-yellow-200">
+                <div className="text-2xl font-bold text-yellow-600">{statistics.stockStats.LOW_STOCK_COUNT || 0}</div>
+                <div className="text-xs text-slate-600 mt-1">قريب من النفاد</div>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-red-50 to-red-100 rounded-xl border border-red-200">
+                <div className="text-2xl font-bold text-red-600">{statistics.stockStats.OUT_OF_STOCK_COUNT || 0}</div>
+                <div className="text-xs text-slate-600 mt-1">منتهي</div>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
+                <div className="text-2xl font-bold text-green-600">{statistics.stockStats.IN_STOCK_COUNT || 0}</div>
+                <div className="text-xs text-slate-600 mt-1">متاح</div>
+              </div>
+            </div>
+          )}
+
+          {/* Movements Statistics */}
+          {statistics.movementsStats && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 mt-4 border-t border-slate-200">
+              <div className="p-3 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl border border-indigo-200">
+                <div className="text-2xl font-bold text-indigo-600">{statistics.movementsStats.TOTAL_MOVEMENTS || 0}</div>
+                <div className="text-xs text-slate-600 mt-1">إجمالي الحركات</div>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200">
+                <div className="text-2xl font-bold text-emerald-600">{statistics.movementsStats.TOTAL_IN || 0}</div>
+                <div className="text-xs text-slate-600 mt-1">إجمالي الإدخال</div>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-rose-50 to-rose-100 rounded-xl border border-rose-200">
+                <div className="text-2xl font-bold text-rose-600">{statistics.movementsStats.TOTAL_OUT || 0}</div>
+                <div className="text-xs text-slate-600 mt-1">إجمالي الإخراج</div>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-xl border border-cyan-200">
+                <div className="text-2xl font-bold text-cyan-600">{statistics.movementsStats.ITEMS_WITH_MOVEMENTS || 0}</div>
+                <div className="text-xs text-slate-600 mt-1">أصناف بحركات</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Statistics Sections */}
@@ -488,14 +591,27 @@ export default function StatisticsPageContent() {
               <h2 className="text-xl font-bold text-slate-800">
                 التصنيفات الرئيسية
               </h2>
-              <button
-                onClick={handleExportMainCategoriesPDF}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold shadow-md hover:shadow-lg print:hidden"
-                title="تصدير PDF للتصنيفات الرئيسية"
-              >
-                <FileText size={18} />
-                <span className="hidden sm:inline">PDF</span>
-              </button>
+              <Can do="read" on="Reports">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleExportMainCategoriesPDF}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold shadow-md hover:shadow-lg print:hidden"
+                    title="تصدير PDF للتصنيفات الرئيسية"
+                  >
+                    <FileText size={18} />
+                    <span className="hidden sm:inline">PDF</span>
+                  </button>
+                  <button
+                    onClick={handleExportItemsExcel}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg print:hidden"
+                    title="تصدير التصنيفات الرئيسية إلى ملف Excel"
+                  >
+                    <FileText size={18} />
+                    <span className="hidden sm:inline">Excel</span>
+                  </button>
+                </div>
+              </Can> 
+
             </div>
             <div className="overflow-x-auto">
               <table className="w-full table-auto border-collapse">
@@ -684,6 +800,94 @@ export default function StatisticsPageContent() {
               ))}
             </div>
           </div>
+
+          {/* Low Stock Items */}
+          {statistics.lowStockItems && statistics.lowStockItems.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 print:rounded-lg print:shadow-md print:break-inside-avoid">
+              <h2 className="text-xl font-bold text-slate-800 mb-4 pb-3 border-b-2 border-yellow-100">
+                ⚠️ الأصناف القريبة من النفاد
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full table-auto border-collapse">
+                  <thead className="bg-slate-50 border-b-2 border-slate-200 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-4 py-3 text-right text-sm font-bold text-slate-700 whitespace-nowrap">اسم الصنف</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-slate-700 whitespace-nowrap">الكمية الحالية</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-slate-700 whitespace-nowrap">الحد الأدنى</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-slate-700 whitespace-nowrap">النقص</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-slate-700 whitespace-nowrap">الوحدة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statistics.lowStockItems.map((item) => (
+                      <tr key={item.ITEM_ID} className="border-b border-slate-100 hover:bg-yellow-50 transition-colors">
+                        <td className="px-4 py-3 text-sm font-medium text-slate-800">{item.ITEM_NAME}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-red-100 text-red-700 font-bold text-sm">
+                            {item.QUANTITY}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 font-bold text-sm">
+                            {item.MIN_QUANTITY}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-orange-100 text-orange-700 font-bold text-sm">
+                            {item.SHORTAGE_QTY}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm text-slate-600">{item.UNIT || 'قطعة'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Movement Types Statistics */}
+          {statistics.movementTypesStats && statistics.movementTypesStats.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 print:rounded-lg print:shadow-md print:break-inside-avoid">
+              <h2 className="text-xl font-bold text-slate-800 mb-4 pb-3 border-b-2 border-blue-100">
+                إحصائيات أنواع الحركات
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full table-auto border-collapse">
+                  <thead className="bg-slate-50 border-b-2 border-slate-200 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-4 py-3 text-right text-sm font-bold text-slate-700 whitespace-nowrap">نوع الحركة</th>
+                      <th className="px-4 py-3 text-right text-sm font-bold text-slate-700 whitespace-nowrap">الكود</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-slate-700 whitespace-nowrap">عدد الحركات</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-slate-700 whitespace-nowrap">إجمالي الكمية</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statistics.movementTypesStats.map((type) => (
+                      <tr key={type.MOVEMENT_TYPE_ID} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-3 text-sm font-medium text-slate-800">{type.TYPE_NAME}</td>
+                        <td className="px-4 py-3 text-sm text-slate-600">
+                          <span className="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-xs">
+                            {type.TYPE_CODE}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
+                            {type.MOVEMENT_COUNT || 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 font-bold text-sm">
+                            {type.TOTAL_QUANTITY || 0}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Users - Hidden in Print */}
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 print:hidden">

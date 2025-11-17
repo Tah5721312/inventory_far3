@@ -1,6 +1,6 @@
 import oracledb from 'oracledb';
 import { executeQuery, executeReturningQuery, getConnection } from '@/lib/database';
-import { Item, User, MainCategory, SubCategory, ItemType, Rank, Floor } from '@/lib/types'; // added Rank and Floor types
+import { Item, User, MainCategory, SubCategory, ItemType, Rank, Floor, InventoryMovement, MovementType } from '@/lib/types';
 
 /**
  * جلب جميع الأصناف مع إمكانية الفلترة
@@ -21,6 +21,7 @@ export async function getAllItems(filters?: {
     SELECT 
       i.ITEM_ID, i.ITEM_NAME, i.SERIAL, i.KIND, i.SITUATION, i.PROPERTIES,
       i.HDD, i.RAM, i.IP, i.COMP_NAME, i.LOCK_NUM,
+      i.QUANTITY, i.MIN_QUANTITY, i.UNIT,
       i.USER_ID, u.FULL_NAME as ASSIGNED_USER,
       i.DEPT_ID, d.DEPT_NAME,
       i.FLOOR_ID, f.FLOOR_NAME,
@@ -98,6 +99,7 @@ export async function getItemById(id: number) {
     SELECT 
       i.ITEM_ID, i.ITEM_NAME, i.SERIAL, i.KIND, i.SITUATION, i.PROPERTIES,
       i.HDD, i.RAM, i.IP, i.COMP_NAME, i.LOCK_NUM,
+      i.QUANTITY, i.MIN_QUANTITY, i.UNIT,
       i.USER_ID, u.FULL_NAME as ASSIGNED_USER,
       i.DEPT_ID, d.DEPT_NAME,
       i.FLOOR_ID, f.FLOOR_NAME,
@@ -124,10 +126,12 @@ export async function createItem(item: Omit<Item, 'ITEM_ID' | 'CREATED_AT' | 'UP
     `
     INSERT INTO far3.ITEMS (
       ITEM_NAME, SUB_CAT_ID, ITEM_TYPE_ID, LOCK_NUM, SERIAL, KIND, SITUATION, 
-      PROPERTIES, HDD, RAM, IP, COMP_NAME, USER_ID, DEPT_ID, FLOOR_ID
+      PROPERTIES, HDD, RAM, IP, COMP_NAME, USER_ID, DEPT_ID, FLOOR_ID, 
+      QUANTITY, MIN_QUANTITY, UNIT
     ) VALUES (
       :item_name, :sub_cat_id, :item_type_id, :lock_num, :serial, :kind, :situation,
-      :properties, :hdd, :ram, :ip, :comp_name, :user_id, :dept_id, :floor_id
+      :properties, :hdd, :ram, :ip, :comp_name, :user_id, :dept_id, :floor_id, 
+      :quantity, :min_quantity, :unit
     ) RETURNING ITEM_ID INTO :id`,
     {
       item_name: item.ITEM_NAME,
@@ -145,6 +149,9 @@ export async function createItem(item: Omit<Item, 'ITEM_ID' | 'CREATED_AT' | 'UP
       user_id: item.USER_ID !== undefined ? item.USER_ID : null,
       dept_id: item.DEPT_ID || null,
       floor_id: item.FLOOR_ID || null,
+      quantity: item.QUANTITY ?? 0,
+      min_quantity: item.MIN_QUANTITY ?? 0,
+      unit: item.UNIT || 'قطعة',
       id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
     }
   );
@@ -181,6 +188,9 @@ export async function updateItem(id: number, item: Partial<Omit<Item, 'ITEM_ID'>
     'FLOOR_ID',
     'SUB_CAT_ID',
     'ITEM_TYPE_ID',
+    'QUANTITY',
+    'MIN_QUANTITY',
+    'UNIT',
   ]);
 
   const setClauses: string[] = [];
@@ -217,6 +227,288 @@ export async function updateItem(id: number, item: Partial<Omit<Item, 'ITEM_ID'>
 export async function deleteItem(id: number) {
   return executeQuery('DELETE FROM far3.ITEMS WHERE ITEM_ID = :id', { id })
     .then((result) => result.rowsAffected || 0);
+}
+
+export async function getMovementTypes() {
+  const query = `
+    SELECT MOVEMENT_TYPE_ID, TYPE_NAME, TYPE_CODE, EFFECT, DESCRIPTION, IS_ACTIVE
+    FROM far3.MOVEMENT_TYPES
+    WHERE IS_ACTIVE = 1
+    ORDER BY MOVEMENT_TYPE_ID
+  `;
+  return executeQuery<MovementType>(query).then((result) => result.rows);
+}
+
+export async function getInventoryMovements(filters?: {
+  itemId?: number;
+  movementTypeId?: number;
+  limit?: number;
+}) {
+  let query = `
+    SELECT 
+      im.MOVEMENT_ID,
+      im.ITEM_ID,
+      i.ITEM_NAME,
+      im.MOVEMENT_TYPE_ID,
+      mt.TYPE_NAME AS MOVEMENT_TYPE,
+      mt.TYPE_CODE,
+      im.QUANTITY,
+      im.PREVIOUS_QTY,
+      im.NEW_QTY,
+      im.MOVEMENT_DATE,
+      im.USER_ID,
+      u.FULL_NAME AS USER_NAME,
+      u.FULL_NAME AS USER_FULL_NAME,
+      im.FROM_DEPT_ID,
+      fd.DEPT_NAME AS FROM_DEPT,
+      im.TO_DEPT_ID,
+      td.DEPT_NAME AS TO_DEPT,
+      im.FROM_FLOOR_ID,
+      ff.FLOOR_NAME AS FROM_FLOOR,
+      im.TO_FLOOR_ID,
+      tf.FLOOR_NAME AS TO_FLOOR,
+      im.REFERENCE_NO,
+      im.NOTES,
+      im.CREATED_AT
+    FROM far3.INVENTORY_MOVEMENTS im
+    LEFT JOIN far3.ITEMS i ON im.ITEM_ID = i.ITEM_ID
+    LEFT JOIN far3.MOVEMENT_TYPES mt ON im.MOVEMENT_TYPE_ID = mt.MOVEMENT_TYPE_ID
+    LEFT JOIN far3.USERS u ON im.USER_ID = u.USER_ID
+    LEFT JOIN far3.DEPARTMENTS fd ON im.FROM_DEPT_ID = fd.DEPT_ID
+    LEFT JOIN far3.DEPARTMENTS td ON im.TO_DEPT_ID = td.DEPT_ID
+    LEFT JOIN far3.FLOORS ff ON im.FROM_FLOOR_ID = ff.FLOOR_ID
+    LEFT JOIN far3.FLOORS tf ON im.TO_FLOOR_ID = tf.FLOOR_ID
+  `;
+
+  const where: string[] = [];
+  const params: oracledb.BindParameters = {};
+
+  if (filters?.itemId) {
+    where.push('im.ITEM_ID = :itemId');
+    params.itemId = filters.itemId;
+  }
+
+  if (filters?.movementTypeId) {
+    where.push('im.MOVEMENT_TYPE_ID = :movementTypeId');
+    params.movementTypeId = filters.movementTypeId;
+  }
+
+  if (where.length > 0) {
+    query += ` WHERE ${where.join(' AND ')}`;
+  }
+
+  query += ' ORDER BY im.MOVEMENT_DATE DESC, im.CREATED_AT DESC';
+
+  if (filters?.limit) {
+    const safeLimit = Math.min(Math.max(filters.limit, 1), 500);
+    query += ` FETCH FIRST ${safeLimit} ROWS ONLY`;
+  }
+
+  const result = await executeQuery<InventoryMovement>(query, params);
+  return result.rows;
+}
+
+export async function addInventoryMovement(params: {
+  itemId: number;
+  movementTypeId: number;
+  unit?: string | null;
+  quantity: number;
+  userId: number;
+  referenceNo?: string | null;
+  notes?: string | null;
+  fromDeptId?: number | null;
+  toDeptId?: number | null;
+  fromFloorId?: number | null;
+  toFloorId?: number | null;
+}) {
+  if (!params.itemId || !params.movementTypeId || !params.quantity || !params.userId) {
+    throw new Error('معرف الصنف ونوع الحركة والكمية والمستخدم مطلوبة');
+  }
+
+  if (params.quantity <= 0) {
+    throw new Error('الكمية يجب أن تكون أكبر من صفر');
+  }
+
+  // إذا تم تمرير unit، نقوم بتحديث UNIT للصنف أولاً
+  if (params.unit && params.unit.trim()) {
+    try {
+      await executeQuery(
+        `UPDATE far3.ITEMS SET UNIT = :unit WHERE ITEM_ID = :item_id`,
+        {
+          unit: params.unit.trim(),
+          item_id: params.itemId,
+        }
+      );
+    } catch (error) {
+      console.error('فشل تحديث UNIT للصنف:', error);
+      // لا نرمي خطأ هنا لأن الحركة يجب أن تتم حتى لو فشل تحديث UNIT
+    }
+  }
+
+  const result = await executeReturningQuery<{ movement_id: number }>(
+    `
+    DECLARE
+      v_movement_id NUMBER;
+    BEGIN
+      far3.ADD_INVENTORY_MOVEMENT(
+        p_item_id => :item_id,
+        p_movement_type_id => :movement_type_id,
+        p_quantity => :quantity,
+        p_user_id => :user_id,
+        p_reference_no => :reference_no,
+        p_notes => :notes,
+        p_from_dept_id => :from_dept_id,
+        p_to_dept_id => :to_dept_id,
+        p_from_floor_id => :from_floor_id,
+        p_to_floor_id => :to_floor_id,
+        p_movement_id => v_movement_id
+      );
+      :movement_id := v_movement_id;
+    END;
+    `,
+    {
+      item_id: params.itemId,
+      movement_type_id: params.movementTypeId,
+      quantity: params.quantity,
+      user_id: params.userId,
+      reference_no: params.referenceNo || null,
+      notes: params.notes || null,
+      from_dept_id: params.fromDeptId || null,
+      to_dept_id: params.toDeptId || null,
+      from_floor_id: params.fromFloorId || null,
+      to_floor_id: params.toFloorId || null,
+      movement_id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+    }
+  );
+
+  const outBinds = result.outBinds as any;
+  const movementId = Array.isArray(outBinds?.movement_id) ? outBinds.movement_id[0] : outBinds?.movement_id;
+
+  return {
+    movementId,
+    item: await getItemById(params.itemId),
+  };
+}
+
+export async function deleteInventoryMovement(movementId: number) {
+  // جلب بيانات الحركة أولاً
+  const movementQuery = `
+    SELECT 
+      im.ITEM_ID,
+      im.QUANTITY,
+      im.PREVIOUS_QTY,
+      im.NEW_QTY,
+      mt.EFFECT,
+      mt.TYPE_CODE
+    FROM far3.INVENTORY_MOVEMENTS im
+    JOIN far3.MOVEMENT_TYPES mt ON im.MOVEMENT_TYPE_ID = mt.MOVEMENT_TYPE_ID
+    WHERE im.MOVEMENT_ID = :movement_id
+  `;
+  
+  const movementResult = await executeQuery<{
+    ITEM_ID: number;
+    QUANTITY: number;
+    PREVIOUS_QTY: number;
+    NEW_QTY: number;
+    EFFECT: number;
+    TYPE_CODE: string;
+  }>(movementQuery, { movement_id: movementId });
+
+  if (!movementResult.rows || movementResult.rows.length === 0) {
+    throw new Error('الحركة غير موجودة');
+  }
+
+  const movement = movementResult.rows[0];
+  const itemId = movement.ITEM_ID;
+
+  // حذف الحركة أولاً
+  await executeQuery(
+    'DELETE FROM far3.INVENTORY_MOVEMENTS WHERE MOVEMENT_ID = :movement_id',
+    { movement_id: movementId }
+  );
+
+  // جلب الكمية الأولية للصنف
+  // إذا كانت هناك حركات متبقية، نستخدم PREVIOUS_QTY للحركة الأولى
+  // إذا لم تكن هناك حركات متبقية، نستخدم الكمية الحالية من ITEMS
+  const firstMovementQuery = `
+    SELECT PREVIOUS_QTY
+    FROM far3.INVENTORY_MOVEMENTS
+    WHERE ITEM_ID = :item_id
+    ORDER BY MOVEMENT_DATE ASC, MOVEMENT_ID ASC
+    FETCH FIRST 1 ROW ONLY
+  `;
+  const firstMovementResult = await executeQuery<{ PREVIOUS_QTY: number }>(
+    firstMovementQuery,
+    { item_id: itemId }
+  );
+  
+  let initialQuantity: number;
+  if (firstMovementResult.rows && firstMovementResult.rows.length > 0) {
+    // إذا كانت هناك حركات متبقية، نستخدم PREVIOUS_QTY للحركة الأولى
+    initialQuantity = firstMovementResult.rows[0].PREVIOUS_QTY;
+  } else {
+    // إذا لم تكن هناك حركات متبقية، نستخدم الكمية الحالية من ITEMS
+    const currentItemQuery = `
+      SELECT COALESCE(QUANTITY, 0) as CURRENT_QTY
+      FROM far3.ITEMS
+      WHERE ITEM_ID = :item_id
+    `;
+    const currentItemResult = await executeQuery<{ CURRENT_QTY: number }>(
+      currentItemQuery,
+      { item_id: itemId }
+    );
+    initialQuantity = currentItemResult.rows[0]?.CURRENT_QTY ?? 0;
+  }
+
+  // إعادة حساب الكمية من جميع الحركات المتبقية
+  const recalculateQuery = `
+    DECLARE
+      v_current_qty NUMBER := :initial_qty;
+      v_movement_qty NUMBER;
+      v_effect NUMBER;
+    BEGIN
+      -- حساب الكمية من جميع الحركات المتبقية مرتبة حسب التاريخ
+      FOR rec IN (
+        SELECT 
+          im.QUANTITY,
+          mt.EFFECT
+        FROM far3.INVENTORY_MOVEMENTS im
+        JOIN far3.MOVEMENT_TYPES mt ON im.MOVEMENT_TYPE_ID = mt.MOVEMENT_TYPE_ID
+        WHERE im.ITEM_ID = :item_id
+        ORDER BY im.MOVEMENT_DATE ASC, im.MOVEMENT_ID ASC
+      ) LOOP
+        v_movement_qty := rec.QUANTITY;
+        v_effect := rec.EFFECT;
+        
+        -- تطبيق تأثير الحركة على الكمية
+        IF v_effect = 1 THEN
+          -- زيادة
+          v_current_qty := v_current_qty + v_movement_qty;
+        ELSIF v_effect = -1 THEN
+          -- نقصان
+          v_current_qty := v_current_qty - v_movement_qty;
+        ELSIF v_effect = 0 THEN
+          -- تعديل مباشر (ADJUSTMENT)
+          v_current_qty := v_movement_qty;
+        END IF;
+      END LOOP;
+      
+      -- تحديث الكمية في جدول الأصناف
+      UPDATE far3.ITEMS
+      SET QUANTITY = v_current_qty,
+          UPDATED_AT = SYSDATE
+      WHERE ITEM_ID = :item_id;
+      
+      COMMIT;
+    END;
+  `;
+  
+  await executeQuery(recalculateQuery, {
+    initial_qty: initialQuantity,
+    item_id: itemId,
+  });
+
+  return getItemById(itemId);
 }
 
 // You can add more functions here for USERS, CATEGORIES, etc.
@@ -1033,6 +1325,60 @@ export async function getStatistics() {
       FROM far3.ITEMS
     `;
 
+    // إحصائيات المخزون
+    const stockStatsQuery = `
+      SELECT 
+        COUNT(ITEM_ID) as TOTAL_ITEMS,
+        SUM(QUANTITY) as TOTAL_QUANTITY,
+        SUM(CASE WHEN QUANTITY <= MIN_QUANTITY AND MIN_QUANTITY > 0 THEN 1 ELSE 0 END) as LOW_STOCK_COUNT,
+        SUM(CASE WHEN QUANTITY = 0 THEN 1 ELSE 0 END) as OUT_OF_STOCK_COUNT,
+        SUM(CASE WHEN QUANTITY > 0 AND (MIN_QUANTITY IS NULL OR MIN_QUANTITY = 0 OR QUANTITY > MIN_QUANTITY) THEN 1 ELSE 0 END) as IN_STOCK_COUNT
+      FROM far3.ITEMS
+    `;
+
+    // إحصائيات الحركات
+    const movementsStatsQuery = `
+      SELECT 
+        COUNT(MOVEMENT_ID) as TOTAL_MOVEMENTS,
+        SUM(CASE WHEN mt.EFFECT = 1 THEN im.QUANTITY ELSE 0 END) as TOTAL_IN,
+        SUM(CASE WHEN mt.EFFECT = -1 THEN im.QUANTITY ELSE 0 END) as TOTAL_OUT,
+        COUNT(DISTINCT im.ITEM_ID) as ITEMS_WITH_MOVEMENTS,
+        COUNT(DISTINCT im.USER_ID) as USERS_WITH_MOVEMENTS
+      FROM far3.INVENTORY_MOVEMENTS im
+      JOIN far3.MOVEMENT_TYPES mt ON im.MOVEMENT_TYPE_ID = mt.MOVEMENT_TYPE_ID
+    `;
+
+    // إحصائيات أنواع الحركات
+    const movementTypesStatsQuery = `
+      SELECT 
+        mt.MOVEMENT_TYPE_ID,
+        mt.TYPE_NAME,
+        mt.TYPE_CODE,
+        COUNT(im.MOVEMENT_ID) as MOVEMENT_COUNT,
+        SUM(im.QUANTITY) as TOTAL_QUANTITY
+      FROM far3.MOVEMENT_TYPES mt
+      LEFT JOIN far3.INVENTORY_MOVEMENTS im ON mt.MOVEMENT_TYPE_ID = im.MOVEMENT_TYPE_ID
+      WHERE mt.IS_ACTIVE = 1
+      GROUP BY mt.MOVEMENT_TYPE_ID, mt.TYPE_NAME, mt.TYPE_CODE
+      ORDER BY mt.MOVEMENT_TYPE_ID
+    `;
+
+    // الأصناف القريبة من النفاد
+    const lowStockItemsQuery = `
+      SELECT 
+        i.ITEM_ID,
+        i.ITEM_NAME,
+        i.QUANTITY,
+        i.MIN_QUANTITY,
+        i.UNIT,
+        (i.MIN_QUANTITY - i.QUANTITY) as SHORTAGE_QTY
+      FROM far3.ITEMS i
+      WHERE i.QUANTITY <= i.MIN_QUANTITY 
+        AND i.MIN_QUANTITY > 0
+      ORDER BY (i.MIN_QUANTITY - i.QUANTITY) DESC
+      FETCH FIRST 20 ROWS ONLY
+    `;
+
     // تنفيذ جميع الاستعلامات
     const [
       mainCategories,
@@ -1044,7 +1390,11 @@ export async function getStatistics() {
       kinds,
       users,
       warehouse,
-      totalItems
+      totalItems,
+      stockStats,
+      movementsStats,
+      movementTypesStats,
+      lowStockItems
     ] = await Promise.all([
       executeQuery(mainCategoriesQuery),
       executeQuery(subCategoriesQuery),
@@ -1055,7 +1405,11 @@ export async function getStatistics() {
       executeQuery(kindQuery),
       executeQuery(usersQuery),
       executeQuery(warehouseQuery),
-      executeQuery(totalItemsQuery)
+      executeQuery(totalItemsQuery),
+      executeQuery(stockStatsQuery),
+      executeQuery(movementsStatsQuery),
+      executeQuery(movementTypesStatsQuery),
+      executeQuery(lowStockItemsQuery)
     ]);
 
     // تنظيف البيانات من Oracle objects
@@ -1088,7 +1442,11 @@ export async function getStatistics() {
       kinds: kinds.rows.map(cleanOracleRow),
       users: users.rows.map(cleanOracleRow),
       warehouse: cleanOracleRow(warehouse.rows[0]),
-      totalItems: cleanOracleRow(totalItems.rows[0])
+      totalItems: cleanOracleRow(totalItems.rows[0]),
+      stockStats: cleanOracleRow(stockStats.rows[0]),
+      movementsStats: cleanOracleRow(movementsStats.rows[0]),
+      movementTypesStats: movementTypesStats.rows.map(cleanOracleRow),
+      lowStockItems: lowStockItems.rows.map(cleanOracleRow)
     };
   } catch (error) {
     console.error('Error in getStatistics:', error);

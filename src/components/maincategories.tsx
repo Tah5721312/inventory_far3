@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Pencil, Trash2, Plus, X, Search, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { DOMAIN } from '@/lib/constants';
 
 interface MainCategory {
   CAT_ID: number;
@@ -27,7 +28,7 @@ const [formData, setFormData] = useState({ CAT_NAME: '', DESCRIPTION: '' });
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/main-categories');
+      const response = await fetch(`${DOMAIN}/api/main-categories`);
       const result = await response.json();
       if (result.success) {
         setCategories(result.data);
@@ -72,8 +73,8 @@ const [formData, setFormData] = useState({ CAT_NAME: '', DESCRIPTION: '' });
     setSubmitting(true);
     try {
       const url = editingCategory
-        ? `/api/main-categories/${editingCategory.CAT_ID}`
-        : '/api/main-categories';
+        ? `${DOMAIN}/api/main-categories/${editingCategory.CAT_ID}`
+        : `${DOMAIN}/api/main-categories`;
 
         // ✅ هنا بننظّف البيانات قبل الإرسال
     const body = {
@@ -107,7 +108,7 @@ const [formData, setFormData] = useState({ CAT_NAME: '', DESCRIPTION: '' });
     if (!confirm('هل أنت متأكد من حذف هذا التصنيف؟')) return;
 
     try {
-      const response = await fetch(`/api/main-categories/${id}`, {
+      const response = await fetch(`${DOMAIN}/api/main-categories/${id}`, {
         method: 'DELETE',
       });
 

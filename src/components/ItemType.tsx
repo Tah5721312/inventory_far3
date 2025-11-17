@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Pencil, Trash2, Plus, X, Search, Loader2, CheckCircle, AlertCircle, Package, FolderTree } from 'lucide-react';
+import { DOMAIN } from '@/lib/constants';
 
 interface SubCategory {
   SUB_CAT_ID: number;
@@ -38,8 +39,8 @@ export default function ItemTypesPage() {
     try {
       setLoading(true);
       const [itemTypesResponse, subCategoriesResponse] = await Promise.all([
-        fetch('/api/item-types'),
-        fetch('/api/sub-categories')
+        fetch(`${DOMAIN}/api/item-types`),
+        fetch(`${DOMAIN}/api/sub-categories`)
       ]);
       
       const itemTypesResult = await itemTypesResponse.json();
@@ -102,8 +103,8 @@ export default function ItemTypesPage() {
     setSubmitting(true);
     try {
       const url = editingItemType
-        ? `/api/item-types/${editingItemType.ITEM_TYPE_ID}`
-        : '/api/item-types';
+        ? `${DOMAIN}/api/item-types/${editingItemType.ITEM_TYPE_ID}`
+        : `${DOMAIN}/api/item-types`;
 
       const body = {
         ITEM_TYPE_NAME: formData.ITEM_TYPE_NAME.trim(),
@@ -137,7 +138,7 @@ export default function ItemTypesPage() {
     if (!confirm('هل أنت متأكد من حذف هذا النوع؟')) return;
 
     try {
-      const response = await fetch(`/api/item-types/${id}`, {
+      const response = await fetch(`${DOMAIN}/api/item-types/${id}`, {
         method: 'DELETE',
       });
 
