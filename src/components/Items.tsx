@@ -5,6 +5,7 @@ import { Search, Plus, Edit2, Trash2, X, Save, Filter, BarChart3, ArrowUpDown, A
 import Link from 'next/link';
 import { escapeHtml } from '@/lib/security';
 import { Can } from '@/components/Can';
+import { utils, writeFileXLSX } from 'xlsx';
 
 interface Item {
   ITEM_ID: number;
@@ -72,7 +73,7 @@ export default function ItemsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [formData, setFormData] = useState<Partial<Item>>({});
-  
+
   // Lookup data
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
@@ -506,6 +507,34 @@ export default function ItemsPage() {
       console.error('Error deleting item:', error);
       alert('فشل في حذف الصنف');
     }
+  };
+
+  const handleExportItemsExcel = () => {
+    if (sortedItems.length === 0) return;
+
+    const rows = sortedItems.map((item, index) => ({
+      '#': index + 1,
+      'اسم الصنف': item.ITEM_NAME || '',
+      'التصنيف الرئيسي': item.MAIN_CATEGORY_NAME || '',
+      'التصنيف الفرعي': item.SUB_CAT_NAME || '',
+      'نوع الصنف': item.ITEM_TYPE_NAME || '',
+      'المستخدم': item.ASSIGNED_USER || 'المخزن',
+      'القسم': item.DEPT_NAME || '',
+      'الطابق': item.FLOOR_NAME || '',
+      'رقم السيريال': item.SERIAL || '',
+      'نوع الأصل': item.KIND || '',
+      'الحالة': item.SITUATION || '',
+      'اسم الجهاز': item.COMP_NAME || '',
+      'IP': item.IP || '',
+      'رقم القفل': item.LOCK_NUM ?? ''
+    }));
+
+    const worksheet = utils.json_to_sheet(rows);
+    const workbook = utils.book_new();
+    utils.book_append_sheet(workbook, worksheet, 'Items');
+
+    const today = new Date().toISOString().split('T')[0];
+    writeFileXLSX(workbook, `inventory-items-${today}.xlsx`);
   };
 
   const handleExportItemsPDF = () => {
@@ -1057,14 +1086,22 @@ export default function ItemsPage() {
 
           {/* PDF Export Button - Only shown if user has reports read permission */}
             <Can do="read" on="Reports">
-              <div className="flex justify-end mb-4 print:hidden">
+              <div className="flex justify-end gap-3 mb-4 print:hidden">
                 <button
                   onClick={handleExportItemsPDF}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold shadow-md hover:shadow-lg"
-                  title="تصدير PDF للأصناف"
+                  title="تصدير التقرير بصيغة PDF"
                 >
                   <FileText size={18} />
-                  <span>تصدير PDF</span>
+                  <span>PDF</span>
+                </button>
+                <button
+                  onClick={handleExportItemsExcel}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg"
+                  title="تصدير الجدول الحالي إلى ملف Excel"
+                >
+                  <FileText size={18} />
+                  <span>Excel</span>
                 </button>
               </div>
             </Can> 
