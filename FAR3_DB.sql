@@ -891,3 +891,333 @@ SELECT
 FROM far3.ROLES r
 LEFT JOIN far3.ROLE_PERMISSIONS rp ON r.ROLE_ID = rp.ROLE_ID
 ORDER BY r.ROLE_ID, rp.SUBJECT, rp.ACTION;
+
+
+------**********************-------------------
+-- ===============================================
+-- 1. إضافة حقل الكمية لجدول الأصناف
+-- ===============================================
+
+-- إضافة عمود الكمية المتاحة للأصناف الموجودة
+ALTER TABLE far3.ITEMS ADD (
+    QUANTITY NUMBER DEFAULT 0 NOT NULL,
+    MIN_QUANTITY NUMBER DEFAULT 0,
+    UNIT VARCHAR2(50) DEFAULT 'قطعة'
+);
+
+COMMENT ON COLUMN far3.ITEMS.QUANTITY IS 'الكمية المتاحة في المخزن';
+COMMENT ON COLUMN far3.ITEMS.MIN_QUANTITY IS 'الحد الأدنى للكمية (تنبيه نقص مخزون)';
+COMMENT ON COLUMN far3.ITEMS.UNIT IS 'وحدة القياس (قطعة، كرتونة، وحدة، إلخ)';
+
+-- ===============================================
+-- 2. جدول أنواع الحركات
+-- ===============================================
+
+CREATE TABLE far3.MOVEMENT_TYPES (
+    MOVEMENT_TYPE_ID NUMBER PRIMARY KEY,
+    TYPE_NAME VARCHAR2(100) NOT NULL UNIQUE,
+    TYPE_CODE VARCHAR2(20) NOT NULL UNIQUE,
+    EFFECT NUMBER(2) NOT NULL, -- 1 للزيادة، -1 للنقصان
+    DESCRIPTION VARCHAR2(500),
+    IS_ACTIVE NUMBER(1) DEFAULT 1,
+    CREATED_AT DATE DEFAULT SYSDATE
+);
+
+COMMENT ON TABLE far3.MOVEMENT_TYPES IS 'أنواع حركات المخزون';
+COMMENT ON COLUMN far3.MOVEMENT_TYPES.EFFECT IS '1 = زيادة، -1 = نقصان';
+
+-- إدراج أنواع الحركات الأساسية
+INSERT INTO far3.MOVEMENT_TYPES (MOVEMENT_TYPE_ID, TYPE_NAME, TYPE_CODE, EFFECT, DESCRIPTION)
+VALUES (1, 'إدخال مخزون', 'IN', 1, 'إضافة كمية جديدة للمخزن');
+
+INSERT INTO far3.MOVEMENT_TYPES (MOVEMENT_TYPE_ID, TYPE_NAME, TYPE_CODE, EFFECT, DESCRIPTION)
+VALUES (2, 'إخراج مخزون', 'OUT', -1, 'صرف كمية من المخزن');
+
+INSERT INTO far3.MOVEMENT_TYPES (MOVEMENT_TYPE_ID, TYPE_NAME, TYPE_CODE, EFFECT, DESCRIPTION)
+VALUES (3, 'مرتجع', 'RETURN', 1, 'إرجاع كمية للمخزن');
+
+INSERT INTO far3.MOVEMENT_TYPES (MOVEMENT_TYPE_ID, TYPE_NAME, TYPE_CODE, EFFECT, DESCRIPTION)
+VALUES (4, 'تالف', 'DAMAGED', -1, 'كمية تالفة تم استبعادها');
+
+INSERT INTO far3.MOVEMENT_TYPES (MOVEMENT_TYPE_ID, TYPE_NAME, TYPE_CODE, EFFECT, DESCRIPTION)
+VALUES (5, 'جرد', 'ADJUSTMENT', 0, 'تعديل الكمية بناءً على الجرد الفعلي');
+
+INSERT INTO far3.MOVEMENT_TYPES (MOVEMENT_TYPE_ID, TYPE_NAME, TYPE_CODE, EFFECT, DESCRIPTION)
+VALUES (6, 'نقل بين أقسام', 'TRANSFER', 0, 'نقل كمية من قسم لآخر');
+
+-- ===============================================
+-- 3. جدول حركات المخزون (الرئيسي)
+-- ===============================================
+
+CREATE TABLE far3.INVENTORY_MOVEMENTS (
+    MOVEMENT_ID NUMBER PRIMARY KEY,
+    ITEM_ID NUMBER NOT NULL,
+    MOVEMENT_TYPE_ID NUMBER NOT NULL,
+    QUANTITY NUMBER NOT NULL,
+    PREVIOUS_QTY NUMBER,
+    NEW_QTY NUMBER,
+    MOVEMENT_DATE DATE DEFAULT SYSDATE,
+    USER_ID NUMBER NOT NULL,
+    FROM_DEPT_ID NUMBER,
+    TO_DEPT_ID NUMBER,
+    FROM_FLOOR_ID NUMBER,
+    TO_FLOOR_ID NUMBER,
+    REFERENCE_NO VARCHAR2(100),
+    NOTES VARCHAR2(500),
+    CREATED_AT DATE DEFAULT SYSDATE,
+    -- Foreign Keys
+    CONSTRAINT FK_MOVEMENT_ITEM FOREIGN KEY (ITEM_ID) 
+        REFERENCES far3.ITEMS(ITEM_ID) ON DELETE CASCADE,
+    CONSTRAINT FK_MOVEMENT_TYPE FOREIGN KEY (MOVEMENT_TYPE_ID) 
+        REFERENCES far3.MOVEMENT_TYPES(MOVEMENT_TYPE_ID),
+    CONSTRAINT FK_MOVEMENT_USER FOREIGN KEY (USER_ID) 
+        REFERENCES far3.USERS(USER_ID),
+    CONSTRAINT FK_MOVEMENT_FROM_DEPT FOREIGN KEY (FROM_DEPT_ID) 
+        REFERENCES far3.DEPARTMENTS(DEPT_ID),
+    CONSTRAINT FK_MOVEMENT_TO_DEPT FOREIGN KEY (TO_DEPT_ID) 
+        REFERENCES far3.DEPARTMENTS(DEPT_ID),
+    CONSTRAINT FK_MOVEMENT_FROM_FLOOR FOREIGN KEY (FROM_FLOOR_ID) 
+        REFERENCES far3.FLOORS(FLOOR_ID),
+    CONSTRAINT FK_MOVEMENT_TO_FLOOR FOREIGN KEY (TO_FLOOR_ID) 
+        REFERENCES far3.FLOORS(FLOOR_ID)
+);
+
+COMMENT ON TABLE far3.INVENTORY_MOVEMENTS IS 'سجل حركات المخزون';
+
+-- Indexes للأداء
+CREATE INDEX far3.IDX_MOVEMENT_ITEM ON far3.INVENTORY_MOVEMENTS(ITEM_ID);
+CREATE INDEX far3.IDX_MOVEMENT_DATE ON far3.INVENTORY_MOVEMENTS(MOVEMENT_DATE);
+CREATE INDEX far3.IDX_MOVEMENT_TYPE ON far3.INVENTORY_MOVEMENTS(MOVEMENT_TYPE_ID);
+CREATE INDEX far3.IDX_MOVEMENT_USER ON far3.INVENTORY_MOVEMENTS(USER_ID);
+
+-- Sequence للـ Primary Key
+CREATE SEQUENCE far3.MOVEMENT_ID START WITH 1 INCREMENT BY 1;
+
+-- Trigger للـ Auto Increment
+CREATE OR REPLACE TRIGGER far3.trg_MOVEMENT_ID
+BEFORE INSERT ON far3.INVENTORY_MOVEMENTS
+FOR EACH ROW
+BEGIN
+  :NEW.MOVEMENT_ID := TO_NUMBER('95' || far3.MOVEMENT_ID.NEXTVAL);
+END;
+/
+
+-- ===============================================
+-- 4. Procedure لإضافة حركة مخزون
+-- ===============================================
+
+CREATE OR REPLACE PROCEDURE far3.ADD_INVENTORY_MOVEMENT (
+    p_item_id IN NUMBER,
+    p_movement_type_id IN NUMBER,
+    p_quantity IN NUMBER,
+    p_user_id IN NUMBER,
+    p_reference_no IN VARCHAR2 DEFAULT NULL,
+    p_notes IN VARCHAR2 DEFAULT NULL,
+    p_from_dept_id IN NUMBER DEFAULT NULL,
+    p_to_dept_id IN NUMBER DEFAULT NULL,
+    p_from_floor_id IN NUMBER DEFAULT NULL,
+    p_to_floor_id IN NUMBER DEFAULT NULL,
+    p_movement_id OUT NUMBER
+) AS
+    v_current_qty NUMBER;
+    v_new_qty NUMBER;
+    v_effect NUMBER;
+    v_type_code VARCHAR2(20);
+BEGIN
+    -- الحصول على الكمية الحالية
+    SELECT QUANTITY INTO v_current_qty
+    FROM far3.ITEMS
+    WHERE ITEM_ID = p_item_id
+    FOR UPDATE;
+    
+    -- الحصول على تأثير نوع الحركة
+    SELECT EFFECT, TYPE_CODE INTO v_effect, v_type_code
+    FROM far3.MOVEMENT_TYPES
+    WHERE MOVEMENT_TYPE_ID = p_movement_type_id;
+    
+    -- حساب الكمية الجديدة
+    IF v_type_code = 'ADJUSTMENT' THEN
+        -- في حالة الجرد، الكمية المدخلة هي الكمية الجديدة
+        v_new_qty := p_quantity;
+    ELSE
+        v_new_qty := v_current_qty + (p_quantity * v_effect);
+    END IF;
+    
+    -- التحقق من عدم وجود كمية سالبة
+    IF v_new_qty < 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'الكمية المتاحة غير كافية للصرف');
+    END IF;
+    
+    -- إضافة سجل الحركة
+    INSERT INTO far3.INVENTORY_MOVEMENTS (
+        ITEM_ID, MOVEMENT_TYPE_ID, QUANTITY, PREVIOUS_QTY, NEW_QTY,
+        USER_ID, REFERENCE_NO, NOTES,
+        FROM_DEPT_ID, TO_DEPT_ID, FROM_FLOOR_ID, TO_FLOOR_ID
+    ) VALUES (
+        p_item_id, p_movement_type_id, p_quantity, v_current_qty, v_new_qty,
+        p_user_id, p_reference_no, p_notes,
+        p_from_dept_id, p_to_dept_id, p_from_floor_id, p_to_floor_id
+    ) RETURNING MOVEMENT_ID INTO p_movement_id;
+    
+    -- تحديث كمية الصنف
+    UPDATE far3.ITEMS
+    SET QUANTITY = v_new_qty,
+        UPDATED_AT = SYSDATE
+    WHERE ITEM_ID = p_item_id;
+    
+    COMMIT;
+    
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20002, 'الصنف أو نوع الحركة غير موجود');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+-- ===============================================
+-- 5. Views مفيدة
+-- ===============================================
+
+-- عرض حركات المخزون مع التفاصيل
+CREATE OR REPLACE VIEW far3.V_INVENTORY_MOVEMENTS AS
+SELECT 
+    im.MOVEMENT_ID,
+    i.ITEM_NAME,
+    i.SERIAL,
+    mt.TYPE_NAME AS MOVEMENT_TYPE,
+    mt.TYPE_CODE,
+    im.QUANTITY,
+    im.PREVIOUS_QTY,
+    im.NEW_QTY,
+    im.MOVEMENT_DATE,
+    u.FULL_NAME AS USER_NAME,
+    fd.DEPT_NAME AS FROM_DEPT,
+    td.DEPT_NAME AS TO_DEPT,
+    ff.FLOOR_NAME AS FROM_FLOOR,
+    tf.FLOOR_NAME AS TO_FLOOR,
+    im.REFERENCE_NO,
+    im.NOTES
+FROM far3.INVENTORY_MOVEMENTS im
+JOIN far3.ITEMS i ON im.ITEM_ID = i.ITEM_ID
+JOIN far3.MOVEMENT_TYPES mt ON im.MOVEMENT_TYPE_ID = mt.MOVEMENT_TYPE_ID
+JOIN far3.USERS u ON im.USER_ID = u.USER_ID
+LEFT JOIN far3.DEPARTMENTS fd ON im.FROM_DEPT_ID = fd.DEPT_ID
+LEFT JOIN far3.DEPARTMENTS td ON im.TO_DEPT_ID = td.DEPT_ID
+LEFT JOIN far3.FLOORS ff ON im.FROM_FLOOR_ID = ff.FLOOR_ID
+LEFT JOIN far3.FLOORS tf ON im.TO_FLOOR_ID = tf.FLOOR_ID
+ORDER BY im.MOVEMENT_DATE DESC;
+
+-- عرض الأصناف القريبة من النفاد
+CREATE OR REPLACE VIEW far3.V_LOW_STOCK_ITEMS AS
+SELECT 
+    i.ITEM_ID,
+    i.ITEM_NAME,
+    i.SERIAL,
+    i.QUANTITY,
+    i.MIN_QUANTITY,
+    i.UNIT,
+    d.DEPT_NAME,
+    f.FLOOR_NAME,
+    sc.SUB_CAT_NAME,
+    (i.MIN_QUANTITY - i.QUANTITY) AS SHORTAGE_QTY
+FROM far3.ITEMS i
+LEFT JOIN far3.DEPARTMENTS d ON i.DEPT_ID = d.DEPT_ID
+LEFT JOIN far3.FLOORS f ON i.FLOOR_ID = f.FLOOR_ID
+LEFT JOIN far3.SUB_CATEGORIES sc ON i.SUB_CAT_ID = sc.SUB_CAT_ID
+WHERE i.QUANTITY <= i.MIN_QUANTITY
+ORDER BY (i.MIN_QUANTITY - i.QUANTITY) DESC;
+
+-- ===============================================
+-- 6. أمثلة على الاستخدام
+-- ===============================================
+
+-- مثال 1: إدخال 50 قطعة من صنف معين
+DECLARE
+    v_movement_id NUMBER;
+BEGIN
+    far3.ADD_INVENTORY_MOVEMENT(
+        p_item_id => 851,           -- معرف الصنف
+        p_movement_type_id => 1,     -- إدخال مخزون
+        p_quantity => 50,            -- الكمية
+        p_user_id => 451,            -- المستخدم
+        p_reference_no => 'PO-2024-001',
+        p_notes => 'توريد دفعة جديدة',
+        p_movement_id => v_movement_id
+    );
+    DBMS_OUTPUT.PUT_LINE('تم إضافة الحركة رقم: ' || v_movement_id);
+END;
+/
+
+-- مثال 2: صرف 10 قطع
+DECLARE
+    v_movement_id NUMBER;
+BEGIN
+    far3.ADD_INVENTORY_MOVEMENT(
+        p_item_id => 851,
+        p_movement_type_id => 2,     -- إخراج مخزون
+        p_quantity => 10,
+        p_user_id => 451,
+        p_reference_no => 'REQ-2024-001',
+        p_notes => 'صرف لقسم تكنولوجيا المعلومات',
+        p_to_dept_id => 1,
+        p_movement_id => v_movement_id
+    );
+    DBMS_OUTPUT.PUT_LINE('تم صرف 10 قطع');
+END;
+/
+
+-- مثال 3: تعديل جرد (الكمية الفعلية 35)
+DECLARE
+    v_movement_id NUMBER;
+BEGIN
+    far3.ADD_INVENTORY_MOVEMENT(
+        p_item_id => 851,
+        p_movement_type_id => 5,     -- جرد
+        p_quantity => 35,            -- الكمية الفعلية
+        p_user_id => 451,
+        p_notes => 'جرد شهري',
+        p_movement_id => v_movement_id
+    );
+END;
+/
+
+-- ===============================================
+-- 7. استعلامات مفيدة
+-- ===============================================
+
+-- عرض جميع حركات صنف معين
+SELECT * FROM far3.V_INVENTORY_MOVEMENTS
+WHERE ITEM_NAME LIKE '%Dell%'
+ORDER BY MOVEMENT_DATE DESC;
+
+-- عرض الأصناف القريبة من النفاد
+SELECT * FROM far3.V_LOW_STOCK_ITEMS;
+
+-- إجمالي الحركات حسب النوع
+SELECT 
+    mt.TYPE_NAME,
+    COUNT(*) AS MOVEMENT_COUNT,
+    SUM(im.QUANTITY) AS TOTAL_QUANTITY
+FROM far3.INVENTORY_MOVEMENTS im
+JOIN far3.MOVEMENT_TYPES mt ON im.MOVEMENT_TYPE_ID = mt.MOVEMENT_TYPE_ID
+GROUP BY mt.TYPE_NAME
+ORDER BY MOVEMENT_COUNT DESC;
+
+-- رصيد كل صنف
+SELECT 
+    i.ITEM_NAME,
+    i.SERIAL,
+    i.QUANTITY,
+    i.MIN_QUANTITY,
+    i.UNIT,
+    CASE 
+        WHEN i.QUANTITY <= i.MIN_QUANTITY THEN 'تحذير: نقص مخزون'
+        WHEN i.QUANTITY = 0 THEN 'منتهي'
+        ELSE 'متاح'
+    END AS STATUS
+FROM far3.ITEMS i
+ORDER BY i.QUANTITY ASC;
+
+COMMIT;
